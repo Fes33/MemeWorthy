@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemeWorthy</title>
+    <link rel="icon" href="images/favicon.png" type="image/png">
+    <style>
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 50px; /* gap between buttons */
+        }
+        .room-button {
+            width: 200px;
+            height: 90px;
+            border-radius: 15px;
+            box-shadow: 10px 10px 0 black;
+            border: none;
+            font-family: 'Chau', sans-serif;
+            font-size: 35px;
+            text-align: center;
+            line-height: 30px;
+        }
+        .room-button:hover {
+            background-color: #12449A; 
+        }
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            padding-top: 40px; 
+            padding-bottom: 80px; 
+        }
+        .username-input-container {
+            text-align: center;
+            padding-top: 50px; 
+            padding-bottom: 50px; 
+            
+        }
+        .rounded-input {
+            border-radius: 30px;
+            text-align: center;
+            background-color: #12449A;
+            padding: 10px; 
+            width: 300px;
+            height: 25px;
+            border: none;
+        }
+        .rounded-input::placeholder {
+            color: #07224F;
+            text-align: left;
+        }
+        @font-face {
+            font-family: 'Chau';
+            src: url('fonts/Chau_Philomene_One/ChauPhilomeneOne-Regular.ttf') format('truetype');
+        }
+        
+    </style>
+</head>
+<body style="background-color: #2B70E4">
+    <div class="logo-container">
+        <img src="images/MemeWorthyLogo.png" alt="Meme Worthy Logo" style="max-width: 33%; min-width: 300px; height: auto;">
+    </div>
+    <div class="username-input-container">
+		<input id="username" type="text" name="username" placeholder="Enter your username..."  class="rounded-input">
+	</div>
+	<div class="button-container">
+		<button id="create-room" class="room-button">Create Room</button>
+		<button id="join-room" class="room-button">Join Room</button>
+	</div>
+    
+    <script>
+        //button action to send a get request to the server
+        document.getElementById('create-room').addEventListener('click', () => {
+            window.location.href = '/create-room';
+        });
+
+        //button action to join a room.
+        document.getElementById('join-room').addEventListener('click', () => {
+            // Prompt user for room ID
+            const roomId = prompt('Enter the 6-digit room ID:');
+            if (roomId && /^[0-9]{6}$/.test(roomId)) { //if it is a valid 6 digit number
+                // Redirect to the room with the specified ID
+                window.location.href = `/room/${roomId}`;
+            } else { //else, send an alert
+                alert('Invalid room ID. Please enter a 6-digit number.');
+            }
+        });
+    </script>
+</body>
+</html>
+

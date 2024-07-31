@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../images/favicon.png" type="image/png">
+    <title>Game Room</title>
+</head>
+<style>
+    #room-code {
+        display: flex;
+        font-family: 'Chau', sans-serif;
+        font-size: 90px;
+    }
+    @font-face {
+        font-family: 'Chau';
+        src: url('../fonts/Chau_Philomene_One/ChauPhilomeneOne-Regular.ttf') format('truetype');
+    }
+</style>
+<body>
+    <h1>Game Room</h1>
+    <p>Tell your friends to join using this code:</p>
+    <div id="room-code">
+
+    </div>
+
+    <script>
+        //gets the room code by splitting the current URL
+        const pathSegments = window.location.pathname.split('/');
+        const roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
+        document.getElementById('room-code').textContent = roomId;
+    </script>
+</body>
+</html>
+
