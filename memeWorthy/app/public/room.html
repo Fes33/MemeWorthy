@@ -27,6 +27,7 @@
     <p>Users in this room:</p>
     <ul id="users-list"></ul>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
@@ -37,6 +38,21 @@
         let urlParams = new URLSearchParams(window.location.search);
         let userId = urlParams.get('userId');
         document.getElementById('current-user').textContent = `Welcome ${userId}!`; //display current user
+
+        //initialize Socket.io
+        const socket = io();
+
+        //join the room
+        socket.emit('join-room', roomId);
+
+        //this listens for users joined. when someone clicks on join room, the server sends an event
+        //to all clients connected to the room and it updates the list.
+        socket.on('user-joined', (data) => {
+            let usersList = document.getElementById('users-list');
+            let listItem = document.createElement('li');
+            listItem.textContent = `${data.username}`;
+            usersList.appendChild(listItem);
+        });
 
         //display the list of current users.
         //get the info about this room from this server 

@@ -2,12 +2,17 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid'); //used to generate user IDs
 const app = express();
 const port = 3000;
-
+const http = require('http');
+const socketIo = require('socket.io'); //used for live updaetd
 
 app.use(express.static('public'));
 app.use(express.json());
 
 let rooms = {}; //stores active rooms and its details
+
+//socketio variables
+const server = http.createServer(app); 
+const io = socketIo(server);
 
 //Post requests creates a room and adds the creator
 app.post('/create-room', (req, res) => {
@@ -29,6 +34,11 @@ app.post('/join-room', (req, res) => {
     if (rooms[roomId]) { //if this room exists and is in the object of active rooms
         let userId = uuidv4(); //generate a userId for this person
         rooms[roomId].users.push({ userId, username }); //push the user ID and username of the user into the list of users of that room
+
+        //sends to all clients connected to that particular room the json for the current user.
+        io.to(roomId).emit('user-joined', { userId, username });
+
+
         res.status(200).json({ userId, roomId }); //return the new userID and roomID
     } else {
         res.status(404).send('Room not found');
@@ -53,6 +63,19 @@ app.get('/room-info/:roomId', (req, res) => {
     }
 });
 
-app.listen(port, () => {
+//Socket.io connection handler
+io.on('connection', (socket) => {
+    console.log('New client connected');
+
+    socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected');
+    });
+});
+
+server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
