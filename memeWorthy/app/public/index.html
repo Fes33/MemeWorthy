@@ -70,19 +70,58 @@
 	</div>
     
     <script>
-        //button action to send a get request to the server
+
+        //button action to create a room
         document.getElementById('create-room').addEventListener('click', () => {
-            window.location.href = '/create-room';
+            let username = document.getElementById('username').value; //grab username from the username input
+            if(username){ //if user entered a username
+                fetch('/create-room', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username }) //send a post request with the username as the body. server will handle room creation
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.roomId && data.userId) {
+                          window.location.href = `/room/${data.roomId}?userId=${username}`; //if all goes well, redirect user to that room
+                      } else {
+                          alert('Error creating room');
+                      }
+                  })
+                  .catch(error => console.error('Error:', error));
+            }else{
+                alert('Please enter a username'); //if user did not enter a username
+            }
         });
 
         //button action to join a room.
         document.getElementById('join-room').addEventListener('click', () => {
-            // Prompt user for room ID
-            const roomId = prompt('Enter the 6-digit room ID:');
+            let username = document.getElementById('username').value; //gets the username from the input
+            let roomId = prompt('Enter the 6-digit room ID:'); //gets roodId from prompt
+
             if (roomId && /^[0-9]{6}$/.test(roomId)) { //if it is a valid 6 digit number
-                // Redirect to the room with the specified ID
-                window.location.href = `/room/${roomId}`;
-            } else { //else, send an alert
+                
+                if(username){ //if user entered a username
+                    fetch('/join-room', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ roomId, username }) //send a request with the roomId and username, server will handle rest
+                    }).then(response => response.json())
+                    .then(data => {
+                        if(data.userId){ //if successful, go to room
+                            window.location.href = `/room/${roomId}?userId=${username}`;
+                        }else{
+                            alert('Room not found');
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }else{
+                    alert('Please enter a username');
+                }
+            } else {
                 alert('Invalid room ID. Please enter a 6-digit number.');
             }
         });

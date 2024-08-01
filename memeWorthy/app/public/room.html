@@ -20,16 +20,37 @@
 </style>
 <body>
     <h1>Game Room</h1>
+    <p id="current-user"></div>
     <p>Tell your friends to join using this code:</p>
-    <div id="room-code">
+    <div id="room-code"></div>
 
-    </div>
+    <p>Users in this room:</p>
+    <ul id="users-list"></ul>
 
     <script>
         //gets the room code by splitting the current URL
-        const pathSegments = window.location.pathname.split('/');
-        const roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
-        document.getElementById('room-code').textContent = roomId;
+        let pathSegments = window.location.pathname.split('/');
+        let roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
+        document.getElementById('room-code').textContent = roomId; //display on screen
+        
+        //extract userId from url query strings
+        let urlParams = new URLSearchParams(window.location.search);
+        let userId = urlParams.get('userId');
+        document.getElementById('current-user').textContent = `Welcome ${userId}!`; //display current user
+
+        //display the list of current users.
+        //get the info about this room from this server 
+        fetch(`/room-info/${roomId}`)
+            .then(response => response.json())
+            .then(data => {
+                let usersList = document.getElementById('users-list');
+                data.users.forEach(user => { //go through the list of users and display them
+                    let listItem = document.createElement('li');
+                    listItem.textContent = `${user.username}`;
+                    usersList.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Error fetching room info:', error));
     </script>
 </body>
 </html>
