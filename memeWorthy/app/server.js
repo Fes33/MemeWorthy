@@ -5,6 +5,8 @@ const app = express();
 const port = 3000;
 const http = require('http');
 const socketIo = require('socket.io'); //used for live updates
+let apiFile = require("../env.json");
+let apiKey = apiFile["api_key"]; // use this to make requests to Giphy
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -149,7 +151,7 @@ app.get('/search-giphy', async (req, res) => {
     try {
         let response = await axios.get(`https://api.giphy.com/v1/gifs/search`, {
             params: {
-                api_key: '7Ot0pWNV26nL9CotyS1FWNS94pZXDuOH',
+                api_key: apiKey,
                 q: query,
                 limit: 10
             }
