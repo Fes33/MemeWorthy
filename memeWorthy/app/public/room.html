@@ -1,42 +1,88 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="../images/favicon.png" type="image/png">
     <title>Game Room</title>
+    <link rel="icon" href="/images/favicon.png" type="image/png">
+    <style>
+        body {
+            background-color: #2B70E4;
+            font-family: 'Chau', sans-serif;
+            color: white;
+            text-align: center;
+        }
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            padding-top: 40px; 
+            padding-bottom: 40px; 
+        }
+        .room-info {
+            font-size: 20px;
+        }
+        .room-code {
+            display: flex;
+            justify-content: center;
+            font-family: 'Chau', sans-serif;
+            font-size: 90px;
+            font-weight: bold;
+        }
+        .user-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .user-list li {
+            font-size: 25px;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        @font-face {
+            font-family: 'Chau';
+            src: url('/fonts/ChauPhilomeneOne-Regular.ttf') format('truetype');
+        }
+    </style>
 </head>
-<style>
-    #room-code {
-        display: flex;
-        font-family: 'Chau', sans-serif;
-        font-size: 90px;
-    }
-    @font-face {
-        font-family: 'Chau';
-        src: url('../fonts/Chau_Philomene_One/ChauPhilomeneOne-Regular.ttf') format('truetype');
-    }
-</style>
 <body>
-    <h1>Game Room</h1>
-    <p id="current-user"></div>
-    <p>Tell your friends to join using this code:</p>
-    <div id="room-code"></div>
+    <div class="logo-container">
+        <img src="/images/MemeWorthyLogo.png" alt="Meme Worthy Logo" style="max-width: 33%; min-width: 300px; height: auto;">
+    </div>
+    <h1 class="room-info">Welcome to the Game Room</h1>
+    <p id="current-user" class="room-info"></p>
+    <p class="room-info">Tell your friends to join using this code:</p>
+    <div id="room-code" class="room-code"></div>
 
-    <p>Users in this room:</p>
-    <ul id="users-list"></ul>
+    <p class="room-info">Users in this room:</p>
+    <ul id="users-list" class="user-list"></ul>
+
+    <button id="start-game">Start Game</button>
+    <div id="game-prompt" class="hidden"></div>
+    <div id="gif-container" class="hidden">
+        <input id="gif-search" type="text" placeholder="Search for a GIF">
+        <button id="search-gif">Search</button>
+        <div id="gif-results"></div>
+    </div>
+    <div id="voting-container" class="hidden">
+        <h2>Vote for GIFs</h2>
+        <div id="gif-votes"></div>
+        <button id="submit-votes">Submit Votes</button>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        let roomId;
+        let userId;
+
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
-        let roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
+        roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
         document.getElementById('room-code').textContent = roomId; //display on screen
         
         //extract userId from url query strings
         let urlParams = new URLSearchParams(window.location.search);
-        let userId = urlParams.get('userId');
+        userId = urlParams.get('userId');
         document.getElementById('current-user').textContent = `Welcome ${userId}!`; //display current user
 
         //initialize Socket.io
@@ -67,7 +113,131 @@
                 });
             })
             .catch(error => console.error('Error fetching room info:', error));
+
+        document.getElementById('start-game').addEventListener('click', () => {
+            fetch('/start-game', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId })
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Game started');
+                } else {
+                    console.error('Error starting game');
+                }
+            });
+        });
+
+        socket.on('game-started', (data) => {
+            document.getElementById('start-game').classList.add('hidden');
+            document.getElementById('game-prompt').textContent = data.prompt;
+            document.getElementById('game-prompt').classList.remove('hidden');
+            document.getElementById('gif-container').classList.remove('hidden');
+        });
+
+        document.getElementById('search-gif').addEventListener('click', () => {
+            let query = document.getElementById('gif-search').value;
+            fetch(`/search-giphy?query=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                let gifResults = document.getElementById('gif-results');
+                gifResults.innerHTML = '';
+                data.data.forEach(gif => {
+                    let img = document.createElement('img');
+                    img.src = gif.images.fixed_height.url;
+                    img.addEventListener('click', () => {
+                        submitGif(gif.images.fixed_height.url);
+                    });
+                    gifResults.appendChild(img);
+                });
+            })
+            .catch(error => console.error('Error searching Giphy:', error));
+        });
+
+        function submitGif(gifUrl) {
+            fetch('/submit-gif', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId, userId, gifUrl })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('gif-container').classList.add('hidden');
+                } else {
+                    console.error('Error submitting GIF');
+                }
+            });
+        }
+
+        socket.on('next-round', (data) => {
+            document.getElementById('game-prompt').textContent = data.prompt;
+            document.getElementById('gif-container').classList.remove('hidden');
+        });
+
+        socket.on('voting-start', (data) => {
+            document.getElementById('game-prompt').classList.add('hidden');
+            document.getElementById('gif-container').classList.add('hidden');
+            document.getElementById('voting-container').classList.remove('hidden');
+
+            let gifVotes = document.getElementById('gif-votes');
+            gifVotes.innerHTML = '';
+            Object.entries(data.submissions).forEach(([round, submissions]) => {
+                Object.entries(submissions).forEach(([userId, gifUrl]) => {
+                    let div = document.createElement('div');
+                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${userId}<br>Round: ${round}<br>`;
+                    let input = document.createElement('input');
+                    input.type = 'number';
+                    input.min = 1;
+                    input.max = 10;
+                    input.dataset.userId = userId;
+                    input.dataset.round = round;
+                    div.appendChild(input);
+                    gifVotes.appendChild(div);
+                });
+            });
+        });
+
+        document.getElementById('submit-votes').addEventListener('click', () => {
+            let votes = {};
+            let inputs = document.querySelectorAll('#gif-votes input');
+            inputs.forEach(input => {
+                let userId = input.dataset.userId;
+                let round = input.dataset.round;
+                if (!votes[userId]) {
+                    votes[userId] = 0;
+                }
+                votes[userId] += parseInt(input.value);
+            });
+
+            fetch('/submit-vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId, userId, votes })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('voting-container').classList.add('hidden');
+                } else {
+                    console.error('Error submitting votes');
+                }
+            });
+        });
+
+        socket.on('game-over', (data) => {
+            let scoresDiv = document.createElement('div');
+            scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
+            Object.entries(data.scores).forEach(([userId, score]) => {
+                scoresDiv.innerHTML += `<p>User: ${userId} - Score: ${score}</p>`;
+            });
+            document.body.appendChild(scoresDiv);
+        });
     </script>
 </body>
 </html>
-
