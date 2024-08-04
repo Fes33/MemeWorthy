@@ -5,11 +5,8 @@ const app = express();
 const port = 3000;
 const http = require('http');
 const socketIo = require('socket.io'); //used for live updates
-<<<<<<< HEAD
 let apiFile = require("../env.json");
 let apiKey = apiFile["api_key"]; // use this to make requests to Giphy
-=======
->>>>>>> 24458e2 (Created Chat sidebar)
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -154,11 +151,7 @@ app.get('/search-giphy', async (req, res) => {
     try {
         let response = await axios.get(`https://api.giphy.com/v1/gifs/search`, {
             params: {
-<<<<<<< HEAD
                 api_key: apiKey,
-=======
-                api_key: '7Ot0pWNV26nL9CotyS1FWNS94pZXDuOH',
->>>>>>> 24458e2 (Created Chat sidebar)
                 q: query,
                 limit: 10
             }
@@ -177,13 +170,10 @@ io.on('connection', (socket) => {
         socket.join(roomId);
     });
 
-<<<<<<< HEAD
-=======
     socket.on('chat-message', (data) => {
         io.to(data.roomId).emit('chat-message', { username: data.userId, message: data.message });
     });
 
->>>>>>> 24458e2 (Created Chat sidebar)
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
