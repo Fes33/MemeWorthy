@@ -43,6 +43,54 @@
             font-family: 'Chau';
             src: url('/fonts/ChauPhilomeneOne-Regular.ttf') format('truetype');
         }
+<<<<<<< HEAD
+=======
+
+        #chat-sidebar {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            width: 300px;
+            height: 97%;
+            background-color: white;
+            border-radius: 15px;
+            color: black;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            display: none;
+        }
+
+        #chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        #chat-input {
+            width: calc(100% - 10px);
+            background-color: black;
+            color: white;
+            border-radius: 15px;
+
+            padding: 10px;
+        }
+
+        #send-chat {
+            width: 50px;
+            padding: 10px;
+        }
+
+
+>>>>>>> 24458e2 (Created Chat sidebar)
     </style>
 </head>
 <body>
@@ -70,6 +118,21 @@
         <button id="submit-votes">Submit Votes</button>
     </div>
 
+<<<<<<< HEAD
+=======
+    <div id="chat-sidebar">
+        <div id="chat-header">
+            <h2>Chat</h2>
+            <button id="close-chat">Close</button>
+        </div>
+        <div id="chat-messages"></div>
+        <input id="chat-input" type="text" placeholder="Type a message...">
+        <button id="send-chat">Send</button>
+    </div>
+
+    <button id="toggle-chat">Open Chat</button>
+
+>>>>>>> 24458e2 (Created Chat sidebar)
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let roomId;
@@ -238,6 +301,38 @@
             });
             document.body.appendChild(scoresDiv);
         });
+<<<<<<< HEAD
+=======
+
+        // Chat functionality
+        document.getElementById('toggle-chat').addEventListener('click', () => {
+            document.getElementById('chat-sidebar').style.display = "block";
+            //document.getElementById('chat-sidebar').classList.remove('hidden');
+        });
+
+        document.getElementById('close-chat').addEventListener('click', () => {
+            document.getElementById('chat-sidebar').style.display = "none";
+            //document.getElementById('chat-sidebar').classList.add('hidden');
+        });
+
+        document.getElementById('send-chat').addEventListener('click', () => {
+            let message = document.getElementById('chat-input').value;
+            if (message.trim()) {
+                socket.emit('chat-message', { roomId, userId, message });
+                document.getElementById('chat-input').value = '';
+            }
+        });
+
+        // Listen for incoming chat messages
+        socket.on('chat-message', (data) => {
+            let chatMessages = document.getElementById('chat-messages');
+            let messageDiv = document.createElement('div');
+            messageDiv.textContent = `${data.username}: ${data.message}`;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+        });
+
+>>>>>>> 24458e2 (Created Chat sidebar)
     </script>
 </body>
 </html>
