@@ -13,6 +13,11 @@ app.use(express.json());
 
 let rooms = {}; //stores active rooms and its details
 
+//When the user disconnects, we need a way to know which user disconnected
+//we will map the socketID (unique ID for each connected client) to that
+//client's username and and room ID.
+let userSocketMap = {}; 
+
 //socketio variables
 const server = http.createServer(app); 
 const io = socketIo(server);
@@ -166,8 +171,12 @@ app.get('/search-giphy', async (req, res) => {
 io.on('connection', (socket) => {
     console.log('New client connected');
 
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', ({ roomId, userId }) => {
         socket.join(roomId);
+
+        //map the socket ID to the room and the username
+        userSocketMap[socket.id] = {roomId, userId};
+
     });
 
     socket.on('chat-message', (data) => {
@@ -176,6 +185,19 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('Client disconnected');
+        let {roomId, userId}  = userSocketMap[socket.id]; //get the roomId the user was in, and the username
+        let room = rooms[roomId]; //access the given room in the object
+        room.users = room.users.filter(user => user.username !== userId); //delete that user from the list by filtering it
+        io.to(roomId).emit('user-left', {userId}); //tell everyone that a user has left and pass that username so that the 
+        //client can delete that from the user list displayed
+
+        //remove room if it is empty
+        if (room.users.length === 0) {
+            delete rooms[roomId];
+        }
+        
+        delete userSocketMap[socket.id];
+        
     });
 });
 

@@ -146,7 +146,7 @@
         const socket = io();
 
         //join the room
-        socket.emit('join-room', roomId);
+        socket.emit('join-room', {roomId, userId});
 
         //this listens for users joined. when someone clicks on join room, the server sends an event
         //to all clients connected to the room and it updates the list.
@@ -155,6 +155,18 @@
             let listItem = document.createElement('li');
             listItem.textContent = `${data.username}`;
             usersList.appendChild(listItem);
+        });
+
+        //this will remove the user that left from the list of users displayed
+        socket.on('user-left', (data) => {
+            let usersList = document.getElementById('users-list');
+            let users = usersList.getElementsByTagName('li');
+            for (let user of users) { //goes through list, compares the names, and deletes once found.
+                if (user.textContent === data.userId) {
+                    usersList.removeChild(user);
+                    break;
+                }
+            }
         });
 
         //display the list of current users.
