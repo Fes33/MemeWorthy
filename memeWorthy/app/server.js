@@ -80,7 +80,107 @@ app.post('/start-game', (req, res) => {
     }
 });
 
+<<<<<<< Updated upstream
 //Submit GIF handler
+=======
+// Start Round 1
+function startRound1(roomId) {
+    console.log(`Starting Round 1 for Room ${roomId}`);
+    rooms[roomId].gameState.round = 1;
+    rooms[roomId].gameState.submittedUsers = []; // Initialize or reset the submitted users list
+    io.to(roomId).emit('start-round', { round: 1, prompt: prompts[0] });
+}
+
+// Handle Round 1 Submissions
+function handleRound1Submission(roomId, userId, gifUrl) {
+    let round = 1;
+    if (!rooms[roomId].gameState.submissions[round]) {
+        rooms[roomId].gameState.submissions[round] = {};
+    }
+    rooms[roomId].gameState.submissions[round][userId] = gifUrl;
+
+    // Track that this user has submitted
+    if (!rooms[roomId].gameState.submittedUsers.includes(userId)) {
+        rooms[roomId].gameState.submittedUsers.push(userId);
+    }
+
+    console.log(`User ${userId} submitted a GIF for Round 1 in Room ${roomId}. Total submitted: ${rooms[roomId].gameState.submittedUsers.length}/${rooms[roomId].users.length}`);
+
+    // Check if all users have submitted for this round
+    if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
+        console.log(`All users submitted for Round 1 in Room ${roomId}`);
+        startRound2(roomId);
+    }
+}
+
+// Start Round 2
+function startRound2(roomId) {
+    console.log(`Starting Round 2 for Room ${roomId}`);
+    rooms[roomId].gameState.round = 2;
+    rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
+    //io.to(roomId).emit('start-round', { round: 2, prompt: prompts[1] }); //Rabib look at this
+    io.to(roomId).emit('game-started', { round: 2, prompt: prompts[1] });
+}
+
+// Handle Round 2 Submissions
+function handleRound2Submission(roomId, userId, gifUrl) {
+    let round = 2;
+    if (!rooms[roomId].gameState.submissions[round]) {
+        rooms[roomId].gameState.submissions[round] = {};
+    }
+    rooms[roomId].gameState.submissions[round][userId] = gifUrl;
+
+    // Track that this user has submitted
+    if (!rooms[roomId].gameState.submittedUsers.includes(userId)) {
+        rooms[roomId].gameState.submittedUsers.push(userId);
+    }
+
+    console.log(`User ${userId} submitted a GIF for Round 2 in Room ${roomId}. Total submitted: ${rooms[roomId].gameState.submittedUsers.length}/${rooms[roomId].users.length}`);
+
+    // Check if all users have submitted for this round
+    if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
+        console.log(`All users submitted for Round 2 in Room ${roomId}`);
+        startRound3(roomId);
+    }
+}
+
+// Start Round 3
+function startRound3(roomId) {
+    console.log(`Starting Round 3 for Room ${roomId}`);
+    rooms[roomId].gameState.round = 3;
+    rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
+    io.to(roomId).emit('start-round', { round: 3, prompt: prompts[2] });
+}
+
+// Handle Round 3 Submissions
+function handleRound3Submission(roomId, userId, gifUrl) {
+    let round = 3;
+    if (!rooms[roomId].gameState.submissions[round]) {
+        rooms[roomId].gameState.submissions[round] = {};
+    }
+    rooms[roomId].gameState.submissions[round][userId] = gifUrl;
+
+    // Track that this user has submitted
+    if (!rooms[roomId].gameState.submittedUsers.includes(userId)) {
+        rooms[roomId].gameState.submittedUsers.push(userId);
+    }
+
+    console.log(`User ${userId} submitted a GIF for Round 3 in Room ${roomId}. Total submitted: ${rooms[roomId].gameState.submittedUsers.length}/${rooms[roomId].users.length}`);
+
+    // Check if all users have submitted for this round
+    if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
+        console.log(`All users submitted for Round 3 in Room ${roomId}`);
+        startVoting(roomId);
+    }
+}
+
+// Start Voting Phase
+function startVoting(roomId) {
+    console.log(`Starting Voting for Room ${roomId}`);
+    io.to(roomId).emit('voting-start', { submissions: rooms[roomId].gameState.submissions });
+}
+
+>>>>>>> Stashed changes
 app.post('/submit-gif', (req, res) => {
     let { roomId, userId, gifUrl } = req.body;
     if (rooms[roomId]) {
