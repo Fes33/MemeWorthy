@@ -80,9 +80,6 @@ app.post('/start-game', (req, res) => {
     }
 });
 
-<<<<<<< Updated upstream
-//Submit GIF handler
-=======
 // Start Round 1
 function startRound1(roomId) {
     console.log(`Starting Round 1 for Room ${roomId}`);
@@ -180,7 +177,6 @@ function startVoting(roomId) {
     io.to(roomId).emit('voting-start', { submissions: rooms[roomId].gameState.submissions });
 }
 
->>>>>>> Stashed changes
 app.post('/submit-gif', (req, res) => {
     let { roomId, userId, gifUrl } = req.body;
     if (rooms[roomId]) {
