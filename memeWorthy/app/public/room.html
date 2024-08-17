@@ -25,7 +25,7 @@
             display: flex;
             justify-content: center;
             font-family: 'Chau', sans-serif;
-            font-size: 90px;
+            font-size: 50px;
             font-weight: bold;
         }
         .user-list {
@@ -78,7 +78,6 @@
             background-color: black;
             color: white;
             border-radius: 15px;
-
             padding: 10px;
         }
 
@@ -86,7 +85,6 @@
             width: 50px;
             padding: 10px;
         }
-
     </style>
 </head>
 <body>
@@ -126,12 +124,11 @@
 
     <button id="toggle-chat">Open Chat</button>
 
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let roomId;
         let userId;
-
+        console.log("hello");
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
         roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
@@ -146,7 +143,8 @@
         const socket = io();
 
         //join the room
-        socket.emit('join-room', roomId);
+        socket.emit('join-room', {roomId, userId});
+        console.log("im joining room");
 
         //this listens for users joined. when someone clicks on join room, the server sends an event
         //to all clients connected to the room and it updates the list.
@@ -155,6 +153,20 @@
             let listItem = document.createElement('li');
             listItem.textContent = `${data.username}`;
             usersList.appendChild(listItem);
+            console.log("someone joined the room");
+            console.log(data.username);
+        });
+
+        //this will remove the user that left from the list of users displayed
+        socket.on('user-left', (data) => {
+            let usersList = document.getElementById('users-list');
+            let users = usersList.getElementsByTagName('li');
+            for (let user of users) { //goes through list, compares the names, and deletes once found.
+                if (user.textContent === data.userId) {
+                    usersList.removeChild(user);
+                    break;
+                }
+            }
         });
 
         //display the list of current users.
@@ -188,104 +200,84 @@
             });
         });
 
-        socket.on('game-started', (data) => {
-            document.getElementById('start-game').classList.add('hidden');
-            document.getElementById('game-prompt').textContent = data.prompt;
-            document.getElementById('game-prompt').classList.remove('hidden');
-            document.getElementById('gif-container').classList.remove('hidden');
+        // When the game starts, hide the start button and show the prompt and GIF search.
+socket.on('game-started', (data) => {
+    document.getElementById('start-game').classList.add('hidden');
+    document.getElementById('game-prompt').textContent = data.prompt;
+    document.getElementById('game-prompt').classList.remove('hidden');
+    document.getElementById('gif-container').classList.remove('hidden');
+});
+
+// Handle the next round starting. Update the prompt and show the GIF search.
+socket.on('next-round', (data) => {
+    console.log('Next round starting');  // Adding a log to verify the event
+    document.getElementById('game-prompt').textContent = data.prompt;
+    document.getElementById('game-prompt').classList.remove('hidden');
+    document.getElementById('gif-container').classList.remove('hidden');
+    document.getElementById('gif-results').innerHTML = ''; // Clear previous search results
+});
+
+// When the voting phase starts, hide the game prompt and GIF search, then show the voting interface.
+socket.on('voting-start', (data) => {
+    document.getElementById('game-prompt').classList.add('hidden');
+    document.getElementById('gif-container').classList.add('hidden');
+    document.getElementById('voting-container').classList.remove('hidden');
+
+    let gifVotes = document.getElementById('gif-votes');
+    gifVotes.innerHTML = '';
+    Object.entries(data.submissions).forEach(([round, submissions]) => {
+        Object.entries(submissions).forEach(([userId, gifUrl]) => {
+            let div = document.createElement('div');
+            div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${userId}<br>Round: ${round}<br>`;
+            let input = document.createElement('input');
+            input.type = 'number';
+            input.min = 1;
+            input.max = 10;
+            input.dataset.userId = userId;
+            input.dataset.round = round;
+            div.appendChild(input);
+            gifVotes.appendChild(div);
         });
+    });
+});
 
-        document.getElementById('search-gif').addEventListener('click', () => {
-            let query = document.getElementById('gif-search').value;
-            fetch(`/search-giphy?query=${query}`)
-            .then(response => response.json())
-            .then(data => {
-                let gifResults = document.getElementById('gif-results');
-                gifResults.innerHTML = '';
-                data.data.forEach(gif => {
-                    let img = document.createElement('img');
-                    img.src = gif.images.fixed_height.url;
-                    img.addEventListener('click', () => {
-                        submitGif(gif.images.fixed_height.url);
-                    });
-                    gifResults.appendChild(img);
-                });
-            })
-            .catch(error => console.error('Error searching Giphy:', error));
-        });
-
-        function submitGif(gifUrl) {
-            fetch('/submit-gif', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ roomId, userId, gifUrl })
-            })
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('gif-container').classList.add('hidden');
-                } else {
-                    console.error('Error submitting GIF');
-                }
-            });
-        }
-
-        socket.on('next-round', (data) => {
-            document.getElementById('game-prompt').textContent = data.prompt;
-            document.getElementById('gif-container').classList.remove('hidden');
-        });
-
-        socket.on('voting-start', (data) => {
-            document.getElementById('game-prompt').classList.add('hidden');
+// When a GIF is submitted, hide the GIF search.
+function submitGif(gifUrl) {
+    fetch('/submit-gif', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ roomId, userId, gifUrl })
+    })
+    .then(response => {
+        if (response.ok) {
             document.getElementById('gif-container').classList.add('hidden');
-            document.getElementById('voting-container').classList.remove('hidden');
+        } else {
+            console.error('Error submitting GIF');
+        }
+    });
+}
 
-            let gifVotes = document.getElementById('gif-votes');
-            gifVotes.innerHTML = '';
-            Object.entries(data.submissions).forEach(([round, submissions]) => {
-                Object.entries(submissions).forEach(([userId, gifUrl]) => {
-                    let div = document.createElement('div');
-                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${userId}<br>Round: ${round}<br>`;
-                    let input = document.createElement('input');
-                    input.type = 'number';
-                    input.min = 1;
-                    input.max = 10;
-                    input.dataset.userId = userId;
-                    input.dataset.round = round;
-                    div.appendChild(input);
-                    gifVotes.appendChild(div);
-                });
+document.getElementById('search-gif').addEventListener('click', () => {
+    let query = document.getElementById('gif-search').value;
+    fetch(`/search-giphy?query=${query}`)
+    .then(response => response.json())
+    .then(data => {
+        let gifResults = document.getElementById('gif-results');
+        gifResults.innerHTML = '';
+        data.data.forEach(gif => {
+            let img = document.createElement('img');
+            img.src = gif.images.fixed_height.url;
+            img.addEventListener('click', () => {
+                submitGif(gif.images.fixed_height.url);
             });
+            gifResults.appendChild(img);
         });
+    })
+    .catch(error => console.error('Error searching Giphy:', error));
+});
 
-        document.getElementById('submit-votes').addEventListener('click', () => {
-            let votes = {};
-            let inputs = document.querySelectorAll('#gif-votes input');
-            inputs.forEach(input => {
-                let userId = input.dataset.userId;
-                let round = input.dataset.round;
-                if (!votes[userId]) {
-                    votes[userId] = 0;
-                }
-                votes[userId] += parseInt(input.value);
-            });
-
-            fetch('/submit-vote', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ roomId, userId, votes })
-            })
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('voting-container').classList.add('hidden');
-                } else {
-                    console.error('Error submitting votes');
-                }
-            });
-        });
 
         socket.on('game-over', (data) => {
             let scoresDiv = document.createElement('div');
@@ -299,12 +291,10 @@
         // Chat functionality
         document.getElementById('toggle-chat').addEventListener('click', () => {
             document.getElementById('chat-sidebar').style.display = "block";
-            //document.getElementById('chat-sidebar').classList.remove('hidden');
         });
 
         document.getElementById('close-chat').addEventListener('click', () => {
             document.getElementById('chat-sidebar').style.display = "none";
-            //document.getElementById('chat-sidebar').classList.add('hidden');
         });
 
         document.getElementById('send-chat').addEventListener('click', () => {
@@ -323,7 +313,7 @@
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
         });
-
     </script>
 </body>
 </html>
+
