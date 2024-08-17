@@ -8,12 +8,40 @@ const socketIo = require('socket.io');
 let apiFile = require("../env.json");
 let apiKey = apiFile["api_key"];
 
+
+
 let { Pool } = require("pg");
 // make this script's dir the cwd
 // b/c npm run start doesn't cd into src/ to run this
 // and if we aren't in its cwd, all relative paths will break
 process.chdir(__dirname);
 let host;
+
+async function logRandomPrompt() {
+    try {
+        // Get a random deck ID (1 to 3)
+        const deckId = Math.floor(Math.random() * 3) + 1;
+
+        // Query the database for a random prompt from the selected deck
+        const result = await pool.query(`
+            SELECT prompt
+            FROM prompts
+            WHERE deck_id = $1
+            ORDER BY RANDOM()
+            LIMIT 1
+        `, [deckId]);
+
+        if (result.rows.length > 0) {
+            console.log(`Random Prompt from Deck ${deckId}: ${result.rows[0].prompt}`);
+        } else {
+            console.log(`No prompts found in Deck ${deckId}`);
+        }
+    } catch (error) {
+        console.error('Error fetching random prompt:', error);
+    }
+}
+
+
 
 let databaseConfig;
 // fly.io sets NODE_ENV to production automatically, otherwise it's unset when running locally
@@ -32,10 +60,23 @@ app.use(express.json());
 
 
 let pool = new Pool(databaseConfig);
+pool.connect()
+    .then(() => {
+        console.log("Connected to the database");
+        return logRandomPrompt(); // Log a random prompt after successful connection
+    })
+    .catch(err => {
+        console.error('Couldn\'t connect to the database:', err);
+    });
+
+
+
+/*
+let pool = new Pool(databaseConfig);
 pool.connect().then(() => {
     console.log("Connected to db");
 });
-
+*/
 
 let rooms = {};
 
