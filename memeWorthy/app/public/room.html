@@ -128,7 +128,7 @@
     <script>
         let roomId;
         let userId;
-
+        console.log("hello");
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
         roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
@@ -144,6 +144,7 @@
 
         //join the room
         socket.emit('join-room', {roomId, userId});
+        console.log("im joining room");
 
         //this listens for users joined. when someone clicks on join room, the server sends an event
         //to all clients connected to the room and it updates the list.
@@ -152,6 +153,20 @@
             let listItem = document.createElement('li');
             listItem.textContent = `${data.username}`;
             usersList.appendChild(listItem);
+            console.log("someone joined the room");
+            console.log(data.username);
+        });
+
+        //this will remove the user that left from the list of users displayed
+        socket.on('user-left', (data) => {
+            let usersList = document.getElementById('users-list');
+            let users = usersList.getElementsByTagName('li');
+            for (let user of users) { //goes through list, compares the names, and deletes once found.
+                if (user.textContent === data.userId) {
+                    usersList.removeChild(user);
+                    break;
+                }
+            }
         });
 
         //this will remove the user that left from the list of users displayed
@@ -313,3 +328,4 @@ document.getElementById('search-gif').addEventListener('click', () => {
     </script>
 </body>
 </html>
+

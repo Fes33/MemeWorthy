@@ -8,8 +8,34 @@ const socketIo = require('socket.io');
 let apiFile = require("../env.json");
 let apiKey = apiFile["api_key"];
 
+let { Pool } = require("pg");
+// make this script's dir the cwd
+// b/c npm run start doesn't cd into src/ to run this
+// and if we aren't in its cwd, all relative paths will break
+process.chdir(__dirname);
+let host;
+
+let databaseConfig;
+// fly.io sets NODE_ENV to production automatically, otherwise it's unset when running locally
+if (process.env.NODE_ENV == "production") {
+    host = "0.0.0.0";
+    databaseConfig = { connectionString: process.env.DATABASE_URL };
+} else {
+    host = "localhost";
+    let { PGUSER, PGPASSWORD, PGDATABASE, PGHOST, PGPORT } = process.env;
+    databaseConfig = { PGUSER, PGPASSWORD, PGDATABASE, PGHOST, PGPORT };
+}
+
+
 app.use(express.static('public'));
 app.use(express.json());
+
+
+let pool = new Pool(databaseConfig);
+pool.connect().then(() => {
+    console.log("Connected to db");
+});
+
 
 let rooms = {};
 
@@ -121,7 +147,8 @@ function startRound2(roomId) {
     console.log(`Starting Round 2 for Room ${roomId}`);
     rooms[roomId].gameState.round = 2;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-    io.to(roomId).emit('start-round', { round: 2, prompt: prompts[1] });
+    //io.to(roomId).emit('start-round', { round: 2, prompt: prompts[1] }); //Rabib look at this
+    io.to(roomId).emit('game-started', { round: 2, prompt: prompts[1] });
 }
 
 // Handle Round 2 Submissions
@@ -280,6 +307,9 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+server.listen(port, host, () => {
+    console.log(`Server is running on http://${host}:${port}`);
 });
+// server.listen(port, () => {
+//     console.log(`Server is running on http://localhost:${port}`);
+// });
