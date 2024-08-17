@@ -147,7 +147,8 @@ function startRound2(roomId) {
     console.log(`Starting Round 2 for Room ${roomId}`);
     rooms[roomId].gameState.round = 2;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-    io.to(roomId).emit('start-round', { round: 2, prompt: prompts[1] });
+    //io.to(roomId).emit('start-round', { round: 2, prompt: prompts[1] }); //Rabib look at this
+    io.to(roomId).emit('game-started', { round: 2, prompt: prompts[1] });
 }
 
 // Handle Round 2 Submissions
@@ -309,3 +310,6 @@ io.on('connection', (socket) => {
 server.listen(port, host, () => {
     console.log(`Server is running on http://${host}:${port}`);
 });
+// server.listen(port, () => {
+//     console.log(`Server is running on http://localhost:${port}`);
+// });
