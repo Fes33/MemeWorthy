@@ -91,7 +91,6 @@ function startRound1(roomId) {
     console.log(`Starting Round 1 for Room ${roomId}`);
     rooms[roomId].gameState.round = 1;
     rooms[roomId].gameState.submittedUsers = []; // Initialize or reset the submitted users list
-    io.to(roomId).emit('start-round', { round: 1, prompt: prompts[0] });
 }
 
 // Handle Round 1 Submissions
@@ -112,7 +111,9 @@ function handleRound1Submission(roomId, userId, gifUrl) {
     // Check if all users have submitted for this round
     if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
         console.log(`All users submitted for Round 1 in Room ${roomId}`);
-        startRound2(roomId);
+        setTimeout(() => {
+            startRound2(roomId);
+        }, 1000);
     }
 }
 
@@ -121,8 +122,7 @@ function startRound2(roomId) {
     console.log(`Starting Round 2 for Room ${roomId}`);
     rooms[roomId].gameState.round = 2;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-    //io.to(roomId).emit('start-round', { round: 2, prompt: prompts[1] }); //Rabib look at this
-    io.to(roomId).emit('game-started', { round: 2, prompt: prompts[1] });
+    io.to(roomId).emit('next-round', { round: 2, prompt: prompts[1] });
 }
 
 // Handle Round 2 Submissions
@@ -143,7 +143,9 @@ function handleRound2Submission(roomId, userId, gifUrl) {
     // Check if all users have submitted for this round
     if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
         console.log(`All users submitted for Round 2 in Room ${roomId}`);
-        startRound3(roomId);
+        setTimeout(() => {
+            startRound3(roomId);
+        }, 1000);
     }
 }
 
@@ -152,7 +154,7 @@ function startRound3(roomId) {
     console.log(`Starting Round 3 for Room ${roomId}`);
     rooms[roomId].gameState.round = 3;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-    io.to(roomId).emit('start-round', { round: 3, prompt: prompts[2] });
+    io.to(roomId).emit('next-round', { round: 3, prompt: prompts[2] });
 }
 
 // Handle Round 3 Submissions
@@ -173,7 +175,9 @@ function handleRound3Submission(roomId, userId, gifUrl) {
     // Check if all users have submitted for this round
     if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
         console.log(`All users submitted for Round 3 in Room ${roomId}`);
-        startVoting(roomId);
+        setTimeout(() => {
+            startVoting(roomId);
+        }, 1000);
     }
 }
 
@@ -204,7 +208,7 @@ app.post('/submit-gif', (req, res) => {
     }
 });
 
-app.post('/submit-vote', (req, res) => {
+app.post('/submit-votes', (req, res) => {
     let { roomId, userId, votes } = req.body;
     if (rooms[roomId]) {
         rooms[roomId].gameState.votes[userId] = votes;
@@ -220,20 +224,27 @@ app.post('/submit-vote', (req, res) => {
             rooms[roomId].users.forEach(user => {
                 scores[user.userId] = 0;
             });
+            console.log('Initial scores:', scores); // Log initial scores
+
             Object.values(rooms[roomId].gameState.votes).forEach(userVotes => {
+                console.log('User Votes:', userVotes); // Log individual user votes
                 Object.entries(userVotes).forEach(([userId, score]) => {
                     scores[userId] += score;
                 });
             });
+
+            console.log('Final scores:', scores); // Log final calculated scores
             io.to(roomId).emit('game-over', { scores });
             console.log(`Game over in Room ${roomId}. Final scores sent.`);
         }
+
 
         res.status(200).send('Vote submitted');
     } else {
         res.status(404).send('Room not found');
     }
 });
+
 
 app.get('/search-giphy', async (req, res) => {
     let { query } = req.query;
