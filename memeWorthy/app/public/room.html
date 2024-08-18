@@ -181,6 +181,18 @@
             }
         });
 
+        //this will remove the user that left from the list of users displayed
+        socket.on('user-left', (data) => {
+            let usersList = document.getElementById('users-list');
+            let users = usersList.getElementsByTagName('li');
+            for (let user of users) { //goes through list, compares the names, and deletes once found.
+                if (user.textContent === data.userId) {
+                    usersList.removeChild(user);
+                    break;
+                }
+            }
+        });
+
         //display the list of current users.
         //get the info about this room from this server 
         fetch(`/room-info/${roomId}`)
@@ -221,10 +233,21 @@ socket.on('game-started', (data) => {
 });
 
 // Handle the next round starting. Update the prompt and show the GIF search.
+// socket.on('next-round', (data) => {
+//     console.log('Next round starting');  // Adding a log to verify the event
+//     console.log(`Next round received: ${data.round}`); // Add this line
+//     document.getElementById('game-prompt').textContent = data.prompt;
+//     document.getElementById('game-prompt').classList.remove('hidden');
+//     document.getElementById('gif-container').classList.remove('hidden');
+//     document.getElementById('gif-results').innerHTML = ''; // Clear previous search results
+// });
+
 socket.on('next-round', (data) => {
-    console.log('Next round starting');  // Adding a log to verify the event
+    console.log(`Next round event received for user: ${userId}, Round: ${data.round}`);
     document.getElementById('game-prompt').textContent = data.prompt;
     document.getElementById('game-prompt').classList.remove('hidden');
+
+    // Ensure previous UI state is cleaned up before showing new search bar
     document.getElementById('gif-container').classList.remove('hidden');
     document.getElementById('gif-results').innerHTML = ''; // Clear previous search results
 });
@@ -265,6 +288,7 @@ function submitGif(gifUrl) {
     .then(response => {
         if (response.ok) {
             document.getElementById('gif-container').classList.add('hidden');
+            console.log(`GIF submitted by user ${userId} in Room ${roomId}`);
         } else {
             console.error('Error submitting GIF');
         }
@@ -290,41 +314,88 @@ document.getElementById('search-gif').addEventListener('click', () => {
     .catch(error => console.error('Error searching Giphy:', error));
 });
 
+socket.on('vote-submitted', (data) => {
+    console.log(`Vote submitted by user: ${data.userId}`);
+    
+    // Optionally, you could hide the voting interface for the user who submitted their vote
+    if (data.userId === userId) {
+        document.getElementById('voting-container').classList.add('hidden');
+        document.getElementById('game-prompt').textContent = 'Your vote has been submitted!';
+        document.getElementById('game-prompt').classList.remove('hidden');
+    }
+});
 
-        socket.on('game-over', (data) => {
-            let scoresDiv = document.createElement('div');
-            scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
-            Object.entries(data.scores).forEach(([userId, score]) => {
-                scoresDiv.innerHTML += `<p>User: ${userId} - Score: ${score}</p>`;
-            });
-            document.body.appendChild(scoresDiv);
-        });
-
-        // Chat functionality
-        document.getElementById('toggle-chat').addEventListener('click', () => {
-            document.getElementById('chat-sidebar').style.display = "block";
-        });
-
-        document.getElementById('close-chat').addEventListener('click', () => {
-            document.getElementById('chat-sidebar').style.display = "none";
-        });
-
-        document.getElementById('send-chat').addEventListener('click', () => {
-            let message = document.getElementById('chat-input').value;
-            if (message.trim()) {
-                socket.emit('chat-message', { roomId, userId, message });
-                document.getElementById('chat-input').value = '';
+document.getElementById('submit-votes').addEventListener('click', () => {
+    let votes = {};
+    let inputs = document.querySelectorAll('#gif-votes input[type="number"]');
+    inputs.forEach(input => {
+        let userId = input.dataset.userId;
+        let score = parseInt(input.value);
+        if (!isNaN(score)) {
+            if (!votes[userId]) {
+                votes[userId] = 0;
             }
-        });
+            votes[userId] += score;
+        }
+    });
 
-        // Listen for incoming chat messages
-        socket.on('chat-message', (data) => {
-            let chatMessages = document.getElementById('chat-messages');
-            let messageDiv = document.createElement('div');
-            messageDiv.textContent = `${data.username}: ${data.message}`;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
-        });
+    console.log(`Submitting votes: ${JSON.stringify(votes)}`);
+
+    fetch('/submit-votes', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ roomId, userId, votes })
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('Votes submitted successfully');
+        } else {
+            console.error('Error submitting votes');
+        }
+    })
+    .catch(error => console.error('Error in submit-votes fetch:', error));
+});
+
+
+socket.on('game-over', (data) => {
+    console.log('Game over event received:', data); // Log the received data
+    let scoresDiv = document.createElement('div');
+    scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
+    Object.entries(data.scores).forEach(([userId, score]) => {
+        scoresDiv.innerHTML += `<p>User: ${userId} - Score: ${score}</p>`;
+    });
+    document.body.appendChild(scoresDiv);
+});
+
+
+// Chat functionality
+document.getElementById('toggle-chat').addEventListener('click', () => {
+    document.getElementById('chat-sidebar').style.display = "block";
+});
+
+document.getElementById('close-chat').addEventListener('click', () => {
+    document.getElementById('chat-sidebar').style.display = "none";
+});
+
+document.getElementById('send-chat').addEventListener('click', () => {
+    let message = document.getElementById('chat-input').value;
+    if (message.trim()) {
+        socket.emit('chat-message', { roomId, userId, message });
+        document.getElementById('chat-input').value = '';
+    }
+});
+
+// Listen for incoming chat messages
+socket.on('chat-message', (data) => {
+    let chatMessages = document.getElementById('chat-messages');
+    let messageDiv = document.createElement('div');
+    messageDiv.textContent = `${data.username}: ${data.message}`;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+});
+
     </script>
 </body>
 </html>
