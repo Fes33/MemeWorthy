@@ -96,10 +96,12 @@ app.post('/create-room', (req, res) => {
     let userId = uuidv4();
     let { username } = req.body;
 
+    let deck = Math.floor(Math.random() * 3) + 1;
     rooms[roomId] = {
         ownerId: userId,
         users: [{ userId, username }],
         gameState: {
+            deck: deck,
             round: 0,
             submissions: {},
             submittedUsers: [], // Track which users have submitted in the current round
@@ -139,13 +141,33 @@ app.get('/room-info/:roomId', (req, res) => {
     }
 });
 
-app.post('/start-game', (req, res) => {
+app.post('/start-game', async (req, res) => {
     let { roomId } = req.body;
     if (rooms[roomId]) {
         rooms[roomId].gameState.round = 1;
         rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-        io.to(roomId).emit('game-started', { round: 1, prompt: prompts[0] });
-        console.log(`Game started in Room ${roomId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
+        let deckId = rooms[roomId].gameState.deck;
+        
+        try {
+            const result = await pool.query(`
+                SELECT prompt
+                FROM prompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+            
+            if (result.rows.length > 0) {
+                io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
+                console.log(`Game started in Room ${roomId}, with Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
+            } else {
+                console.error(`No prompts found for Deck ${deckId} in Room ${roomId}`);
+            }
+        } catch (error) {
+            console.error('Error fetching prompt from the database:', error);
+            res.status(500).send('Failed to start the game');
+            return;
+        }
         startRound1(roomId);
         res.status(200).send('Game started');
     } else {
@@ -185,11 +207,32 @@ function handleRound1Submission(roomId, userId, gifUrl) {
 }
 
 // Start Round 2
-function startRound2(roomId) {
+async function startRound2(roomId) {
     console.log(`Starting Round 2 for Room ${roomId}`);
     rooms[roomId].gameState.round = 2;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-    io.to(roomId).emit('next-round', { round: 2, prompt: prompts[1] });
+    let deckId = rooms[roomId].gameState.deck;
+    try {
+        const result = await pool.query(`
+            SELECT prompt
+            FROM prompts
+            WHERE deck_id = $1
+            ORDER BY RANDOM()
+            LIMIT 1
+        `, [deckId]);
+        
+        if (result.rows.length > 0) {
+            io.to(roomId).emit('next-round', { round: 2, prompt: result.rows[0].prompt });
+            console.log(`Game started in Room ${roomId}, with Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
+        } else {
+            console.error(`No prompts found for Deck ${deckId} in Room ${roomId}`);
+        }
+    } catch (error) {
+        console.error('Error fetching prompt from the database:', error);
+        res.status(500).send('Failed to start the game');
+        return;
+    }
+    
 }
 
 // Handle Round 2 Submissions
@@ -217,11 +260,31 @@ function handleRound2Submission(roomId, userId, gifUrl) {
 }
 
 // Start Round 3
-function startRound3(roomId) {
+async function startRound3(roomId) {
     console.log(`Starting Round 3 for Room ${roomId}`);
     rooms[roomId].gameState.round = 3;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-    io.to(roomId).emit('next-round', { round: 3, prompt: prompts[2] });
+    let deckId = rooms[roomId].gameState.deck;
+    try {
+        const result = await pool.query(`
+            SELECT prompt
+            FROM prompts
+            WHERE deck_id = $1
+            ORDER BY RANDOM()
+            LIMIT 1
+        `, [deckId]);
+        
+        if (result.rows.length > 0) {
+            io.to(roomId).emit('next-round', { round: 3, prompt: result.rows[0].prompt });
+            console.log(`Game started in Room ${roomId}, with Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
+        } else {
+            console.error(`No prompts found for Deck ${deckId} in Room ${roomId}`);
+        }
+    } catch (error) {
+        console.error('Error fetching prompt from the database:', error);
+        res.status(500).send('Failed to start the game');
+        return;
+    }
 }
 
 // Handle Round 3 Submissions
