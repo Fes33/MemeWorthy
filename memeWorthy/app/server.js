@@ -346,13 +346,21 @@ app.post('/submit-votes', (req, res) => {
         console.log(`User ${userId} submitted votes in Room ${roomId}`);
 
         // Check if all users have voted
-        let allVoted = rooms[roomId].users.every(user => rooms[roomId].gameState.votes[user.userId]);
+        console.log(rooms[roomId].gameState.votes);
+        //let allVoted = rooms[roomId].users.every(user => rooms[roomId].gameState.votes[user.userId]);
 
-        if (allVoted) {
+        //if (allVoted) {
+        console.log("votes length:");
+        console.log(rooms[roomId].gameState.votes.length);
+        console.log("users length:");
+        console.log(rooms[roomId].users.length);
+
+        if (Object.keys(rooms[roomId].gameState.votes).length === rooms[roomId].users.length) {
             console.log(`All users voted in Room ${roomId}. Calculating scores...`);
             let scores = {};
             rooms[roomId].users.forEach(user => {
-                scores[user.userId] = 0;
+                //scores[user.userId] = 0;
+                scores[user.username] = 0;
             });
             console.log('Initial scores:', scores); // Log initial scores
 
