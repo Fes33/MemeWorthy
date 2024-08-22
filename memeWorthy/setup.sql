@@ -20,6 +20,22 @@ CREATE TABLE prompts (
     prompt TEXT NOT NULL
 );
 
+--create 'customDecks' table
+--this table will store the names of the custom decks and the creator
+CREATE TABLE customDecks (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    creator TEXT NOT NULL
+);
+
+--create 'customPrompts' table
+--these will actually contain the custom prompts and connect them back to the custom deck
+CREATE TABLE customPrompts (
+    id SERIAL PRIMARY KEY,
+    deck_id INT REFERENCES customDecks(id) ON DELETE CASCADE,
+    prompt TEXT NOT NULL
+);
+
 --insert to the deck table the deck names
 INSERT INTO decks (name) VALUES
     ('Everyday Situations'),

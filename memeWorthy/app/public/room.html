@@ -100,6 +100,8 @@
     <ul id="users-list" class="user-list"></ul>
 
     <button id="start-game">Start Game</button>
+    <label for="use-custom-prompt">Use Custom Prompt</label>
+    <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
         <input id="gif-search" type="text" placeholder="Search for a GIF">
@@ -110,6 +112,21 @@
         <h2>Vote for GIFs</h2>
         <div id="gif-votes"></div>
         <button id="submit-votes">Submit Votes</button>
+    </div>
+    <div id="custom-prompt-div" class="hidden">
+        <h2>Create a deck with 10 unique prompts to use in your game!</h2>
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <p>Name your deck something creative!</p>
+        <input id="custom-deck-name" type="text" placeholder="Coolest Deck Ever">
     </div>
 
     <div id="chat-sidebar">
@@ -125,10 +142,14 @@
     <button id="toggle-chat">Open Chat</button>
 
     <script src="/socket.io/socket.io.js"></script>
+
+
+
+
     <script>
         let roomId;
         let userId;
-        console.log("hello");
+
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
         roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
@@ -207,24 +228,95 @@
             })
             .catch(error => console.error('Error fetching room info:', error));
 
+            
         document.getElementById('start-game').addEventListener('click', () => {
-            fetch('/start-game', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ roomId })
-            })
-            .then(response => {
-                if (response.ok) {
-                    console.log('Game started');
-                } else {
-                    console.error('Error starting game');
+            let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
+            let customPromptDiv = document.getElementById('custom-prompt-div');
+            let customPrompts = [];
+            let customDeckName = document.getElementById('custom-deck-name').value.trim();
+
+            if (useCustomPrompt) {
+                let promptInputs = customPromptDiv.getElementsByClassName('custom-prompt-input');
+                let allFilled = true;
+
+                for (let i = 0; i < promptInputs.length; i++) {
+                    const promptValue = promptInputs[i].value.trim();
+                    if (promptValue === '') {
+                        allFilled = false;
+                        break;
+                    }
+                    customPrompts.push(promptValue);
                 }
-            });
+
+                if (allFilled) {
+                    if(customDeckName == ''){
+                        alert('Please pick a name for this deck!');
+                    }
+                    else{
+                        customPromptDiv.classList.add('hidden');
+                        fetch('/start-game', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                roomId,
+                                useCustomPrompt,
+                                customPrompts: useCustomPrompt ? customPrompts : null,
+                                username: userId,
+                                deckName: customDeckName
+                            })
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                console.log('Game started');
+                            } else {
+                                console.error('Error starting game');
+                            }
+                        });
+                    }
+                }
+                else{
+                    alert('Please fill in all the prompt fields.');
+                }
+            }
+            else{
+                fetch('/start-game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        roomId,
+                        useCustomPrompt,
+                        customPrompts: useCustomPrompt ? customPrompts : null,
+                        username: userId,
+                        deckName: null
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Game started');
+                    } else {
+                        console.error('Error starting game');
+                    }
+                });
+            }
+
+            
         });
 
-        // When the game starts, hide the start button and show the prompt and GIF search.
+        document.getElementById('use-custom-prompt').addEventListener('change', function() {
+            var customPromptDiv = document.getElementById('custom-prompt-div');
+            
+            if (this.checked) {
+                customPromptDiv.classList.remove('hidden');
+            } else {
+                customPromptDiv.classList.add('hidden');
+            }
+        });
+
+// When the game starts, hide the start button and show the prompt and GIF search.
 socket.on('game-started', (data) => {
     document.getElementById('start-game').classList.add('hidden');
     document.getElementById('game-prompt').textContent = data.prompt;

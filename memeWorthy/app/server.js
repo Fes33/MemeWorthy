@@ -103,6 +103,7 @@ app.post('/create-room', (req, res) => {
         gameState: {
             deck: deck,
             round: 0,
+            useCustomDeck: false,
             submissions: {},
             submittedUsers: [], // Track which users have submitted in the current round
             votes: {},
@@ -141,39 +142,86 @@ app.get('/room-info/:roomId', (req, res) => {
     }
 });
 
-app.post('/start-game', async (req, res) => {
-    let { roomId } = req.body;
+app.post('/start-game', (req, res) => {
+    let { roomId, useCustomPrompt, customPrompts, username, deckName } = req.body;
+
     if (rooms[roomId]) {
         rooms[roomId].gameState.round = 1;
         rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-        let deckId = rooms[roomId].gameState.deck;
-        
-        try {
-            const result = await pool.query(`
+
+        if (useCustomPrompt) {
+            rooms[roomId].gameState.useCustomDeck = true;
+            // Insert the custom deck into customDecks table
+            pool.query(`
+                INSERT INTO customDecks (name, creator)
+                VALUES ($1, $2)
+                RETURNING id
+            `, [deckName, username])
+            .then(result => {
+                const customDeckId = result.rows[0].id;
+                const promptInserts = customPrompts.map(prompt => {
+                    return pool.query(`
+                        INSERT INTO customPrompts (deck_id, prompt)
+                        VALUES ($1, $2)
+                    `, [customDeckId, prompt]);
+                });
+
+                return Promise.all(promptInserts).then(() => customDeckId);
+            })
+            .then(customDeckId => {
+                rooms[roomId].gameState.deck = customDeckId; // Assign custom deck ID to the room
+                return pool.query(`
+                    SELECT prompt
+                    FROM customPrompts
+                    WHERE deck_id = $1
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                `, [customDeckId]);
+            })
+            .then(result => {
+                if (result.rows.length > 0) {
+                    io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
+                    console.log(`Game started in Room ${roomId} with Custom Deck #${rooms[roomId].gameState.deck}, starting Round 1 with ${rooms[roomId].users.length} users.`);
+                } else {
+                    console.error(`No prompts found for Custom Deck #${rooms[roomId].gameState.deck} in Room ${roomId}`);
+                }
+                startRound1(roomId);
+                res.status(200).send('Game started');
+            })
+            .catch(error => {
+                console.error('Error during custom deck creation or prompt retrieval:', error);
+                res.status(500).send('Failed to start the game with custom deck');
+            });
+        } else {
+            // If not using custom prompts, use the standard deck
+            const deckId = rooms[roomId].gameState.deck;
+            pool.query(`
                 SELECT prompt
                 FROM prompts
                 WHERE deck_id = $1
                 ORDER BY RANDOM()
                 LIMIT 1
-            `, [deckId]);
-            
-            if (result.rows.length > 0) {
-                io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
-                console.log(`Game started in Room ${roomId}, with Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
-            } else {
-                console.error(`No prompts found for Deck ${deckId} in Room ${roomId}`);
-            }
-        } catch (error) {
-            console.error('Error fetching prompt from the database:', error);
-            res.status(500).send('Failed to start the game');
-            return;
+            `, [deckId])
+            .then(result => {
+                if (result.rows.length > 0) {
+                    io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
+                    console.log(`Game started in Room ${roomId} with Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
+                } else {
+                    console.error(`No prompts found for Deck #${deckId} in Room ${roomId}`);
+                }
+                startRound1(roomId);
+                res.status(200).send('Game started');
+            })
+            .catch(error => {
+                console.error('Error fetching prompt from the standard deck:', error);
+                res.status(500).send('Failed to start the game');
+            });
         }
-        startRound1(roomId);
-        res.status(200).send('Game started');
     } else {
         res.status(404).send('Room not found');
     }
 });
+
 
 // Start Round 1
 function startRound1(roomId) {
@@ -212,14 +260,30 @@ async function startRound2(roomId) {
     rooms[roomId].gameState.round = 2;
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
     let deckId = rooms[roomId].gameState.deck;
+
     try {
-        const result = await pool.query(`
-            SELECT prompt
-            FROM prompts
-            WHERE deck_id = $1
-            ORDER BY RANDOM()
-            LIMIT 1
-        `, [deckId]);
+        let result;
+        console.log("is this room using custom decks?");
+        console.log(rooms[roomId].gameState.useCustomDeck);
+        if (rooms[roomId].gameState.useCustomDeck) {
+            // Query from customPrompts table if using custom deck
+            result = await pool.query(`
+                SELECT prompt
+                FROM customPrompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+        } else {
+            // Query from standard prompts table if not using custom deck
+            result = await pool.query(`
+                SELECT prompt
+                FROM prompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+        }
         
         if (result.rows.length > 0) {
             io.to(roomId).emit('next-round', { round: 2, prompt: result.rows[0].prompt });
@@ -266,13 +330,27 @@ async function startRound3(roomId) {
     rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
     let deckId = rooms[roomId].gameState.deck;
     try {
-        const result = await pool.query(`
-            SELECT prompt
-            FROM prompts
-            WHERE deck_id = $1
-            ORDER BY RANDOM()
-            LIMIT 1
-        `, [deckId]);
+        let result;
+
+        if (rooms[roomId].gameState.useCustomDeck) {
+            // Query from customPrompts table if using custom deck
+            result = await pool.query(`
+                SELECT prompt
+                FROM customPrompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+        } else {
+            // Query from standard prompts table if not using custom deck
+            result = await pool.query(`
+                SELECT prompt
+                FROM prompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+        }
         
         if (result.rows.length > 0) {
             io.to(roomId).emit('next-round', { round: 3, prompt: result.rows[0].prompt });
