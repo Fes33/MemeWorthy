@@ -17,6 +17,7 @@ let { Pool } = require("pg");
 process.chdir(__dirname);
 let host;
 
+// function for debugging
 async function logRandomPrompt() {
     try {
         // Get a random deck ID (1 to 3)
@@ -69,15 +70,7 @@ pool.connect()
         console.error('Couldn\'t connect to the database:', err);
     });
 
-
-
-/*
-let pool = new Pool(databaseConfig);
-pool.connect().then(() => {
-    console.log("Connected to db");
-});
-*/
-
+//this object holds the active rooms, their information and game state
 let rooms = {};
 
 let userSocketMap = {};
@@ -91,6 +84,7 @@ const prompts = [
     "Pick a cat GIF"
 ];
 
+//post request hanlder to create a room
 app.post('/create-room', (req, res) => {
     let roomId = Math.floor(100000 + Math.random() * 900000).toString();
     let userId = uuidv4();
@@ -113,6 +107,7 @@ app.post('/create-room', (req, res) => {
     res.status(200).json({ roomId, userId });
 });
 
+//post request handler to join a room
 app.post('/join-room', (req, res) => {
     let { roomId, username } = req.body;
     if (rooms[roomId]) {
@@ -126,10 +121,12 @@ app.post('/join-room', (req, res) => {
     }
 });
 
+//serve the room.html
 app.get('/room/:roomId', (req, res) => {
     res.sendFile(__dirname + '/public/room.html');
 });
 
+//gives room information, usefull for debugging
 app.get('/room-info/:roomId', (req, res) => {
     let roomId = req.params.roomId;
     if (rooms[roomId]) {
@@ -142,13 +139,15 @@ app.get('/room-info/:roomId', (req, res) => {
     }
 });
 
+//post request handler to start the game
 app.post('/start-game', (req, res) => {
     let { roomId, useCustomPrompt, customPrompts, username, deckName, useUserCreatedDeck, deckId } = req.body;
 
     if (rooms[roomId]) {
         rooms[roomId].gameState.round = 1;
         rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
-
+        
+        //if game is started using a user-created deck, query the customPrompt table for that deck
         if (useUserCreatedDeck) {
             rooms[roomId].gameState.useCustomDeck = true;
             rooms[roomId].gameState.deck = deckId; // Use the selected user-created deck
@@ -174,6 +173,7 @@ app.post('/start-game', (req, res) => {
                 console.error('Error fetching prompt from the user-created deck:', error);
                 res.status(500).send('Failed to start the game with user-created deck');
             });
+        //if instead its a new deck with prompts made by the user, create that deck.
         } else if (useCustomPrompt) {
             rooms[roomId].gameState.useCustomDeck = true;
 
@@ -487,6 +487,7 @@ app.post('/submit-votes', (req, res) => {
     }
 });
 
+//send API request to GIPHY and return those gifs
 app.get('/search-giphy', async (req, res) => {
     let { query } = req.query;
     try {
@@ -503,6 +504,7 @@ app.get('/search-giphy', async (req, res) => {
     }
 });
 
+//query the custom decks table to get 3 decks
 app.get('/get-user-decks', async (req, res) => {
     const limit = 3;
     const offset = parseInt(req.query.offset) || 0; // Default to 0 if no offset is provided
@@ -540,6 +542,8 @@ app.get('/get-user-decks', async (req, res) => {
         res.status(500).send('Failed to retrieve decks');
     }
 });
+
+//function to delete the deck
 app.post('/delete-deck', async (req, res) => {
     const { deckId } = req.body;
     try {
@@ -587,6 +591,3 @@ io.on('connection', (socket) => {
 server.listen(port, host, () => {
     console.log(`Server is running on http://${host}:${port}`);
 });
-// server.listen(port, () => {
-//     console.log(`Server is running on http://localhost:${port}`);
-// });
