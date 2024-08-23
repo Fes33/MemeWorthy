@@ -127,6 +127,9 @@
         <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
         <p>Name your deck something creative!</p>
         <input id="custom-deck-name" type="text" placeholder="Coolest Deck Ever">
+        <p>Check out decks other users have made!!</p>
+        <div id="user-made-decks"></div>
+        <button id="load-more-decks">Load More</button>
     </div>
 
     <div id="chat-sidebar">
@@ -229,82 +232,117 @@
             .catch(error => console.error('Error fetching room info:', error));
 
             
-        document.getElementById('start-game').addEventListener('click', () => {
-            let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
-            let customPromptDiv = document.getElementById('custom-prompt-div');
-            let customPrompts = [];
-            let customDeckName = document.getElementById('custom-deck-name').value.trim();
+            document.getElementById('start-game').addEventListener('click', () => {
+                let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
+                let customPromptDiv = document.getElementById('custom-prompt-div');
+                let customPrompts = [];
+                let customDeckName = document.getElementById('custom-deck-name').value.trim();
+                let useUserCreatedDeck = false;
+                let selectedDeckId = null;
 
-            if (useCustomPrompt) {
-                let promptInputs = customPromptDiv.getElementsByClassName('custom-prompt-input');
-                let allFilled = true;
-
-                for (let i = 0; i < promptInputs.length; i++) {
-                    const promptValue = promptInputs[i].value.trim();
-                    if (promptValue === '') {
-                        allFilled = false;
-                        break;
-                    }
-                    customPrompts.push(promptValue);
+                // Check if a user-created deck is selected
+                const selectedDeck = document.querySelector('input[name="deckSelect"]:checked');
+                console.log("selected Deck");
+                console.log(selectedDeck);
+                if (selectedDeck) {
+                    useUserCreatedDeck = true;
+                    selectedDeckId = selectedDeck.value;
+                    console.log("selectedDeckID");
+                    console.log(selectedDeckId);
                 }
-
-                if (allFilled) {
-                    if(customDeckName == ''){
-                        alert('Please pick a name for this deck!');
-                    }
-                    else{
-                        customPromptDiv.classList.add('hidden');
-                        fetch('/start-game', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                roomId,
-                                useCustomPrompt,
-                                customPrompts: useCustomPrompt ? customPrompts : null,
-                                username: userId,
-                                deckName: customDeckName
-                            })
+                console.log(useUserCreatedDeck);
+                if (useUserCreatedDeck) {
+                    fetch('/start-game', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            roomId,
+                            useCustomPrompt: false, // User is using a user-created deck
+                            customPrompts: null,
+                            username: userId,
+                            deckName: null,
+                            useUserCreatedDeck: true,
+                            deckId: selectedDeckId
                         })
-                        .then(response => {
-                            if (response.ok) {
-                                console.log('Game started');
-                            } else {
-                                console.error('Error starting game');
-                            }
-                        });
-                    }
-                }
-                else{
-                    alert('Please fill in all the prompt fields.');
-                }
-            }
-            else{
-                fetch('/start-game', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        roomId,
-                        useCustomPrompt,
-                        customPrompts: useCustomPrompt ? customPrompts : null,
-                        username: userId,
-                        deckName: null
                     })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        console.log('Game started');
-                    } else {
-                        console.error('Error starting game');
-                    }
-                });
-            }
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('Game started with user-created deck');
+                        } else {
+                            console.error('Error starting game with user-created deck');
+                        }
+                    });
+                } else if (useCustomPrompt) {
+                    let promptInputs = customPromptDiv.getElementsByClassName('custom-prompt-input');
+                    let allFilled = true;
 
-            
-        });
+                    for (let i = 0; i < promptInputs.length; i++) {
+                        const promptValue = promptInputs[i].value.trim();
+                        if (promptValue === '') {
+                            allFilled = false;
+                            break;
+                        }
+                        customPrompts.push(promptValue);
+                    }
+
+                    if (allFilled) {
+                        if (customDeckName === '') {
+                            alert('Please pick a name for this deck!');
+                        } else {
+                            customPromptDiv.classList.add('hidden');
+                            fetch('/start-game', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    roomId,
+                                    useCustomPrompt,
+                                    customPrompts: useCustomPrompt ? customPrompts : null,
+                                    username: userId,
+                                    deckName: customDeckName,
+                                    useUserCreatedDeck: false,
+                                    deckId: null
+                                })
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    console.log('Game started with custom prompts');
+                                } else {
+                                    console.error('Error starting game with custom prompts');
+                                }
+                            });
+                        }
+                    } else {
+                        alert('Please fill in all the prompt fields.');
+                    }
+                } else {
+                    fetch('/start-game', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            roomId,
+                            useCustomPrompt,
+                            customPrompts: null,
+                            username: userId,
+                            deckName: null,
+                            useUserCreatedDeck: false,
+                            deckId: null
+                        })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('Game started with standard deck');
+                        } else {
+                            console.error('Error starting game with standard deck');
+                        }
+                    });
+                }
+            });
 
         document.getElementById('use-custom-prompt').addEventListener('change', function() {
             var customPromptDiv = document.getElementById('custom-prompt-div');
@@ -315,6 +353,82 @@
                 customPromptDiv.classList.add('hidden');
             }
         });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let offset = 0;
+            let selectedDeckId = null;
+
+            const loadDecks = () => {
+                fetch(`/get-user-decks?offset=${offset}`)
+                    .then(response => response.json())
+                    .then(decks => {
+                        
+                        const userMadeDecksDiv = document.getElementById('user-made-decks');
+
+                        decks.forEach(deck => {
+                            const deckDiv = document.createElement('div');
+                            deckDiv.className = 'user-deck';
+
+                            const deckTitle = document.createElement('h3');
+                            deckTitle.textContent = `Deck Name: ${deck.deckName} (by ${deck.creator})`;
+
+                            // Create the checkbox
+                            const deckCheckbox = document.createElement('input');
+                            deckCheckbox.type = 'checkbox';
+                            deckCheckbox.name = 'deckSelect';
+                            deckCheckbox.value = deck.id;
+                            
+                            deckCheckbox.addEventListener('change', function () {
+                                if (this.checked) {
+                                    selectedDeckId = this.value;
+                                    console.log("selectedDeckID");
+                                    console.log(selectedDeckId)
+                                    // Uncheck all other checkboxes
+                                    document.querySelectorAll('input[name="deckSelect"]').forEach(checkbox => {
+                                        if (checkbox !== this) {
+                                            checkbox.checked = false;
+                                        }
+                                    });
+                                } else {
+                                    selectedDeckId = null;
+                                }
+                            });
+
+                            deckDiv.appendChild(deckCheckbox);
+                            deckDiv.appendChild(deckTitle);
+
+                            const promptList = document.createElement('ul');
+                            deck.prompts.forEach(prompt => {
+                                const promptItem = document.createElement('li');
+                                promptItem.textContent = prompt;
+                                promptList.appendChild(promptItem);
+                            });
+
+                            deckDiv.appendChild(promptList);
+                            userMadeDecksDiv.appendChild(deckDiv);
+                        });
+
+                        if (decks.length < 3) {
+                            document.getElementById('load-more-decks').disabled = true; // Disable the button if there are no more decks to load
+                        }
+
+                        offset += 3; // Increase the offset for the next batch
+                    })
+                    .catch(error => {
+                        console.error('Error fetching decks:', error);
+                    });
+            };
+
+            // Load the first batch when the page loads
+            loadDecks();
+
+            // Add event listener to "Load More" button
+            document.getElementById('load-more-decks').addEventListener('click', () => {
+                loadDecks();
+            });
+        });
+
+
 
 // When the game starts, hide the start button and show the prompt and GIF search.
 socket.on('game-started', (data) => {
