@@ -100,7 +100,7 @@
     <ul id="users-list" class="user-list"></ul>
 
     <button id="start-game">Start Game</button>
-    <label for="use-custom-prompt">Use Custom Prompt</label>
+    <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
     <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
@@ -152,6 +152,16 @@
     <script>
         let roomId;
         let userId;
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                const deleteButtons = document.querySelectorAll('.delete-deck-button');
+                deleteButtons.forEach(button => {
+                    button.classList.remove('hidden'); // Show each button
+                });
+                console.log("Delete buttons are now visible.");
+            }
+        });
+
 
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
@@ -234,6 +244,8 @@
             
             document.getElementById('start-game').addEventListener('click', () => {
                 let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
+                let useCustomPromptElement = document.getElementById('use-custom-prompt');
+                let useCustomPromptText = document.getElementById('use-custom-prompt-text');
                 let customPromptDiv = document.getElementById('custom-prompt-div');
                 let customPrompts = [];
                 let customDeckName = document.getElementById('custom-deck-name').value.trim();
@@ -252,6 +264,10 @@
                 }
                 console.log(useUserCreatedDeck);
                 if (useUserCreatedDeck) {
+
+                    customPromptDiv.classList.add('hidden');
+                    useCustomPromptElement.classList.add('hidden');
+                    useCustomPromptText.classList.add('hidden');
                     fetch('/start-game', {
                         method: 'POST',
                         headers: {
@@ -292,6 +308,10 @@
                             alert('Please pick a name for this deck!');
                         } else {
                             customPromptDiv.classList.add('hidden');
+
+                            customPromptDiv.classList.add('hidden');
+                            useCustomPromptElement.classList.add('hidden');
+                            useCustomPromptText.classList.add('hidden');
                             fetch('/start-game', {
                                 method: 'POST',
                                 headers: {
@@ -319,6 +339,10 @@
                         alert('Please fill in all the prompt fields.');
                     }
                 } else {
+
+                    customPromptDiv.classList.add('hidden');
+                    useCustomPromptElement.classList.add('hidden');
+                    useCustomPromptText.classList.add('hidden');
                     fetch('/start-game', {
                         method: 'POST',
                         headers: {
@@ -393,11 +417,46 @@
                                     selectedDeckId = null;
                                 }
                             });
+ 
+                            // Create the delete button
+                            const deleteButton = document.createElement('button');
+                            deleteButton.id = `delete-deck-button-${deck.id}`;
+                            deleteButton.value = deck.id;
+                            deleteButton.className = 'delete-deck-button hidden';
+                            deleteButton.textContent = 'Delete Deck';
 
+                            deleteButton.addEventListener('click', function() {
+                                const deckId = this.value; // Get the deck ID from the button's value
+                                if (confirm(`Are you sure you want to delete deck ID: ${deckId}?`)) {
+                                    fetch('/delete-deck', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ deckId: deckId }),
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            alert('Deck deleted successfully');
+                                            // Optionally remove the deck from the DOM
+                                            deckDiv.remove();
+                                        } else {
+                                            alert('Error deleting deck');
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                    });
+                                }
+                            });
+                            
                             deckDiv.appendChild(deckCheckbox);
                             deckDiv.appendChild(deckTitle);
+                            deckDiv.appendChild(deleteButton);
 
                             const promptList = document.createElement('ul');
+                            promptList.style.listStyleType = 'none';
                             deck.prompts.forEach(prompt => {
                                 const promptItem = document.createElement('li');
                                 promptItem.textContent = prompt;

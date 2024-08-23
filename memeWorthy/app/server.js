@@ -540,6 +540,17 @@ app.get('/get-user-decks', async (req, res) => {
         res.status(500).send('Failed to retrieve decks');
     }
 });
+app.post('/delete-deck', async (req, res) => {
+    const { deckId } = req.body;
+    try {
+        await pool.query('DELETE FROM customDecks WHERE id = $1', [deckId]);
+        await pool.query('DELETE FROM customPrompts WHERE deck_Id = $1', [deckId]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.json({ success: false });
+    }
+});
 
 
 
