@@ -528,14 +528,18 @@
             let gifVotes = document.getElementById('gif-votes');
             gifVotes.innerHTML = '';
             Object.entries(data.submissions).forEach(([round, submissions]) => {
-                Object.entries(submissions).forEach(([userId, gifUrl]) => {
+                Object.entries(submissions).forEach(([submissionUserId, gifUrl]) => {
+                    if (submissionUserId === userId) {
+                        return; // Skip this iteration if the user is trying to vote on their own submission
+                    }
+
                     let div = document.createElement('div');
-                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${userId}<br>Round: ${round}<br>`;
+                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${submissionUserId}<br>Round: ${round}<br>`;
                     let input = document.createElement('input');
                     input.type = 'number';
                     input.min = 1;
                     input.max = 10;
-                    input.dataset.userId = userId;
+                    input.dataset.userId = submissionUserId;
                     input.dataset.round = round;
                     div.appendChild(input);
                     gifVotes.appendChild(div);
