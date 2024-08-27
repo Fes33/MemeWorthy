@@ -151,6 +151,7 @@
 
     <script>
         let roomId;
+        let username;
         let userId;
 
         //this is a secret dev tool used to activate delete deck button
@@ -174,15 +175,16 @@
         
         //extract userId from url query strings
         let urlParams = new URLSearchParams(window.location.search);
+        username = urlParams.get('username');
         userId = urlParams.get('userId');
-        document.getElementById('current-user').textContent = `Welcome ${userId}!`; //display current user
+        document.getElementById('current-user').textContent = `Welcome ${username}!`; //display current user
+
 
         //initialize Socket.io
         const socket = io();
 
         //join the room
-        socket.emit('join-room', {roomId, userId});
-        console.log("im joining room");
+        socket.emit('join-room', {roomId, username});
 
         //this listens for users joined. when someone clicks on join room, the server sends an event
         //to all clients connected to the room and it updates the list.
@@ -191,8 +193,6 @@
             let listItem = document.createElement('li');
             listItem.textContent = `${data.username}`;
             usersList.appendChild(listItem);
-            console.log("someone joined the room");
-            console.log(data.username);
         });
 
         //this will remove the user that left from the list of users displayed
@@ -279,7 +279,7 @@
                         roomId,
                         useCustomPrompt: false, // User is using a user-created deck
                         customPrompts: null,
-                        username: userId,
+                        username: username,
                         deckName: null,
                         useUserCreatedDeck: true,
                         deckId: selectedDeckId
@@ -327,7 +327,7 @@
                                 roomId,
                                 useCustomPrompt,
                                 customPrompts: useCustomPrompt ? customPrompts : null,
-                                username: userId,
+                                username: username,
                                 deckName: customDeckName,
                                 useUserCreatedDeck: false,
                                 deckId: null
@@ -359,7 +359,7 @@
                         roomId,
                         useCustomPrompt,
                         customPrompts: null,
-                        username: userId,
+                        username: username,
                         deckName: null,
                         useUserCreatedDeck: false,
                         deckId: null
@@ -415,8 +415,6 @@
                             deckCheckbox.addEventListener('change', function () {
                                 if (this.checked) {
                                     selectedDeckId = this.value;
-                                    console.log("selectedDeckID");
-                                    console.log(selectedDeckId)
                                     // Uncheck all other checkboxes
                                     document.querySelectorAll('input[name="deckSelect"]').forEach(checkbox => {
                                         if (checkbox !== this) {
@@ -500,6 +498,32 @@
         });
 
 
+        //this shows the custom prompt functionality only to room creator
+        //this fetch fetches the room creator and compares it against the current user
+        fetch(`/room-info/${roomId}`)
+        .then(response => {
+            // Check if the response is successful
+            if (!response.ok) {
+                throw new Error('Room not found');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Print the ownerId from the received data
+            if(data.ownerId != userId){
+                let useCustomPromptElement = document.getElementById('use-custom-prompt');
+                let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+                let startButton = document.getElementById('start-game');
+                useCustomPromptElement.classList.add('hidden');
+                useCustomPromptText.classList.add('hidden');
+                startButton.classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            // Handle any errors
+            console.error('Error:', error.message);
+        });
+
         // When the game starts, hide the start button and show the prompt and GIF search.
         socket.on('game-started', (data) => {
             document.getElementById('start-game').classList.add('hidden');
@@ -510,7 +534,7 @@
 
         // Handler for next round
         socket.on('next-round', (data) => {
-            console.log(`Next round event received for user: ${userId}, Round: ${data.round}`);
+            console.log(`Next round event received for user: ${username}, Round: ${data.round}`);
             document.getElementById('game-prompt').textContent = data.prompt;
             document.getElementById('game-prompt').classList.remove('hidden');
 
@@ -529,7 +553,7 @@
             gifVotes.innerHTML = '';
             Object.entries(data.submissions).forEach(([round, submissions]) => {
                 Object.entries(submissions).forEach(([submissionUserId, gifUrl]) => {
-                    if (submissionUserId === userId) {
+                    if (submissionUserId === username) {
                         return; // Skip this iteration if the user is trying to vote on their own submission
                     }
 
@@ -548,18 +572,19 @@
         });
 
         // When a GIF is submitted, hide the GIF search.
+        
         function submitGif(gifUrl) {
             fetch('/submit-gif', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ roomId, userId, gifUrl })
+                body: JSON.stringify({ roomId, username, gifUrl })
             })
             .then(response => {
                 if (response.ok) {
                     document.getElementById('gif-container').classList.add('hidden');
-                    console.log(`GIF submitted by user ${userId} in Room ${roomId}`);
+                    console.log(`GIF submitted by user ${username} in Room ${roomId}`);
                 } else {
                     console.error('Error submitting GIF');
                 }
@@ -588,8 +613,8 @@
 
         // Once your vote is succesfully submitted, you get a message saying it has been
         socket.on('vote-submitted', (data) => {
-            console.log(`Vote submitted by user: ${data.userId}`);
-            if (data.userId === userId) {
+            console.log(`Vote submitted by user: ${data.username}`);
+            if (data.username === username) {
                 document.getElementById('voting-container').classList.add('hidden');
                 document.getElementById('game-prompt').textContent = 'Your vote has been submitted!';
                 document.getElementById('game-prompt').classList.remove('hidden');
@@ -612,13 +637,12 @@
             });
 
             console.log(`Submitting votes: ${JSON.stringify(votes)}`);
-
             fetch('/submit-votes', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ roomId, userId, votes })
+                body: JSON.stringify({ roomId, username, votes })
             })
             .then(response => {
                 if (response.ok) {
@@ -654,7 +678,7 @@
         document.getElementById('send-chat').addEventListener('click', () => {
             let message = document.getElementById('chat-input').value;
             if (message.trim()) {
-                socket.emit('chat-message', { roomId, userId, message });
+                socket.emit('chat-message', { roomId, username, message });
                 document.getElementById('chat-input').value = '';
             }
         });

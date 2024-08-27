@@ -84,7 +84,7 @@
                 }).then(response => response.json())
                   .then(data => {
                       if (data.roomId && data.userId) {
-                          window.location.href = `/room/${data.roomId}?userId=${username}`; //if all goes well, redirect user to that room
+                          window.location.href = `/room/${data.roomId}?username=${username}&userId=${data.userId}`; //if all goes well, redirect user to that room
                       } else {
                           alert('Error creating room');
                       }
@@ -112,7 +112,7 @@
                     }).then(response => response.json())
                     .then(data => {
                         if(data.userId){ //if successful, go to room
-                            window.location.href = `/room/${roomId}?userId=${username}`;
+                            window.location.href = `/room/${data.roomId}?username=${username}&userId=${data.userId}`;
                         }else{
                             alert('Room not found');
                         }

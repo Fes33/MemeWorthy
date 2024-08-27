@@ -258,19 +258,19 @@ function startRound1(roomId) {
 }
 
 // Handle Round 1 Submissions
-function handleRound1Submission(roomId, userId, gifUrl) {
+function handleRound1Submission(roomId, username, gifUrl) {
     let round = 1;
     if (!rooms[roomId].gameState.submissions[round]) {
         rooms[roomId].gameState.submissions[round] = {};
     }
-    rooms[roomId].gameState.submissions[round][userId] = gifUrl;
+    rooms[roomId].gameState.submissions[round][username] = gifUrl;
 
     // Track that this user has submitted
-    if (!rooms[roomId].gameState.submittedUsers.includes(userId)) {
-        rooms[roomId].gameState.submittedUsers.push(userId);
+    if (!rooms[roomId].gameState.submittedUsers.includes(username)) {
+        rooms[roomId].gameState.submittedUsers.push(username);
     }
 
-    console.log(`User ${userId} submitted a GIF for Round 1 in Room ${roomId}. Total submitted: ${rooms[roomId].gameState.submittedUsers.length}/${rooms[roomId].users.length}`);
+    console.log(`User ${username} submitted a GIF for Round 1 in Room ${roomId}. Total submitted: ${rooms[roomId].gameState.submittedUsers.length}/${rooms[roomId].users.length}`);
 
     // Check if all users have submitted for this round
     if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
@@ -423,18 +423,18 @@ function startVoting(roomId) {
 }
 
 app.post('/submit-gif', (req, res) => {
-    let { roomId, userId, gifUrl } = req.body;
+    let { roomId, username, gifUrl } = req.body;
     if (rooms[roomId]) {
         let round = rooms[roomId].gameState.round;
         switch (round) {
             case 1:
-                handleRound1Submission(roomId, userId, gifUrl);
+                handleRound1Submission(roomId, username, gifUrl);
                 break;
             case 2:
-                handleRound2Submission(roomId, userId, gifUrl);
+                handleRound2Submission(roomId, username, gifUrl);
                 break;
             case 3:
-                handleRound3Submission(roomId, userId, gifUrl);
+                handleRound3Submission(roomId, username, gifUrl);
                 break;
         }
         res.status(200).send('GIF submitted');
@@ -444,21 +444,15 @@ app.post('/submit-gif', (req, res) => {
 });
 
 app.post('/submit-votes', (req, res) => {
-    let { roomId, userId, votes } = req.body;
+    let { roomId, username, votes } = req.body;
     if (rooms[roomId]) {
-        rooms[roomId].gameState.votes[userId] = votes;
-        io.to(roomId).emit('vote-submitted', { userId });
-        console.log(`User ${userId} submitted votes in Room ${roomId}`);
+        rooms[roomId].gameState.votes[username] = votes;
+        io.to(roomId).emit('vote-submitted', { username });
+        console.log(`User ${username} submitted votes in Room ${roomId}`);
 
         // Check if all users have voted
         console.log(rooms[roomId].gameState.votes);
         //let allVoted = rooms[roomId].users.every(user => rooms[roomId].gameState.votes[user.userId]);
-
-        //if (allVoted) {
-        console.log("votes length:");
-        console.log(rooms[roomId].gameState.votes.length);
-        console.log("users length:");
-        console.log(rooms[roomId].users.length);
 
         if (Object.keys(rooms[roomId].gameState.votes).length === rooms[roomId].users.length) {
             console.log(`All users voted in Room ${roomId}. Calculating scores...`);
@@ -471,8 +465,8 @@ app.post('/submit-votes', (req, res) => {
 
             Object.values(rooms[roomId].gameState.votes).forEach(userVotes => {
                 console.log('User Votes:', userVotes); // Log individual user votes
-                Object.entries(userVotes).forEach(([userId, score]) => {
-                    scores[userId] += score;
+                Object.entries(userVotes).forEach(([username, score]) => {
+                    scores[username] += score;
                 });
             });
 
