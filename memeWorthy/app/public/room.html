@@ -628,6 +628,7 @@
             inputs.forEach(input => {
                 let userId = input.dataset.userId;
                 let score = parseInt(input.value);
+                score = Math.max(0, Math.min(score, 10));
                 if (!isNaN(score)) {
                     if (!votes[userId]) {
                         votes[userId] = 0;

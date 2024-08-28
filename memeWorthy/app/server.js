@@ -561,7 +561,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chat-message', (data) => {
-        io.to(data.roomId).emit('chat-message', { username: data.userId, message: data.message });
+        io.to(data.roomId).emit('chat-message', { username: data.username, message: data.message });
     });
 
     socket.on('disconnect', () => {
