@@ -156,19 +156,29 @@
     <p class="room-info">Users in this room:</p>
     <ul id="users-list" class="user-list"></ul>
 
-    <label for="max-players" id="max-players-text">Set Max Number of Players:</label>
-    <input type="number" id="max-players-number" min="1">
-    <button id="set-max-players">Set</button>
+    
 
-
+    <div id="start-game-container">
     <button id="start-game">Start Game</button>
-    <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
-    <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
+    </div>
+
+    <div id="max-players-container" class="hidden">
+    <label for="max-players" id="max-players-text">Set Max Number of Players:</label>
+    <input type="number" id="max-players-number" min="1" max="10" value="5">
+    <button id="set-max-players">Set</button>
+    </div>
 
     <div id="rounds-container" class="hidden">
     <label for="num-rounds">Number of Rounds:</label>
     <input type="number" id="num-rounds" min="1" max="10" value="3">
     </div>
+
+    <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
+    <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
+
+    
+
+    
 
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
@@ -328,6 +338,8 @@
             .then(data => {
                 if (data.ownerId === userId) {
                     document.getElementById('rounds-container').classList.remove('hidden');
+                    document.getElementById('max-players-container').classList.remove('hidden');
+                    
                 }
                 let usersList = document.getElementById('users-list');
                 data.users.forEach(user => { //go through the list of users and display them

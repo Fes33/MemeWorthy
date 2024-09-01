@@ -137,10 +137,11 @@ app.post('/join-room', (req, res) => {
             console.log(`${username} (${userId}) joined Room ${roomId}`);
             res.status(200).json({ userId, roomId });
         } else {
-            res.status(403).send('Room is full');
+            console.log("room is full");
+            res.status(400).json('Room is full');
         }
     } else {
-        res.status(404).send('Room not found');
+        res.status(400).json('Room not found');
     }
 });
 

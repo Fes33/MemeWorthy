@@ -97,39 +97,53 @@
 
         //button action to join a room.
         document.getElementById('join-room').addEventListener('click', () => {
-            let username = document.getElementById('username').value; //gets the username from the input
-            let roomId = prompt('Enter the 6-digit room ID:'); //gets roodId from prompt
+        let username = document.getElementById('username').value;
+        let roomId = prompt('Enter the 6-digit room ID:');
 
-            if (roomId && /^[0-9]{6}$/.test(roomId)) { //if it is a valid 6 digit number
-                
-                if(username){ //if user entered a username
-                    fetch('/join-room', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ roomId, username }) //send a request with the roomId and username, server will handle rest
-                    }).then(response => response.json())
-                    .then(data => {
-                        if(data.userId){ //if successful, go to room
-                            window.location.href = `/room/${data.roomId}?username=${username}&userId=${data.userId}`;
-                        }else{
-                            // Handle different error messages
-                            if (data.error === 'Room is full') {
-                                alert('This room is full');
-                            } else if (data.error === 'Room not found') {
-                                alert('Room not found');
+        if (roomId && /^[0-9]{6}$/.test(roomId)) {
+            if (username) {
+                fetch('/join-room', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ roomId, username })
+                }).then(response => {
+                    // Check if response status is not OK
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            // Attempt to parse the response as JSON
+                            try {
+                                const errorData = JSON.parse(text);
+                                throw new Error(errorData.error || 'Unknown error');
+                            } catch (e) {
+                                // Handle cases where the response is plain text
+                                throw new Error(text);
                             }
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-                }else{
-                    alert('Please enter a username');
-                }
+                        });
+                    }
+                    // If response is OK, parse JSON
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.userId) {
+                        // Handle successful response
+                        window.location.href = `/room/${data.roomId}?username=${username}&userId=${data.userId}`;
+                    }
+                })
+                .catch(error => {
+                    // Handle errors thrown in the previous steps
+                    console.error('Error:', error.message);
+                    alert(error.message);
+                });
             } else {
-                alert('Invalid room ID. Please enter a 6-digit number.');
+                alert('Please enter a username');
             }
-        });
+        } else {
+            alert('Invalid room ID. Please enter a 6-digit number.');
+        }
+    });
+
     </script>
 </body>
 </html>
