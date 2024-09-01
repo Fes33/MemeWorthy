@@ -95,6 +95,7 @@ app.post('/create-room', (req, res) => {
         ownerId: userId,
         users: [{ userId, username }],
         maxPlayers: 5, // Default Max
+        maxRound: 3,
         gameState: {
             deck: deck,
             round: 0,
@@ -163,11 +164,13 @@ app.get('/room-info/:roomId', (req, res) => {
 
 //post request handler to start the game
 app.post('/start-game', (req, res) => {
-    let { roomId, useCustomPrompt, customPrompts, username, deckName, useUserCreatedDeck, deckId } = req.body;
+
+    let { roomId, useCustomPrompt, customPrompts, username, deckName, useUserCreatedDeck, deckId, maxRound } = req.body;
 
     if (rooms[roomId]) {
         rooms[roomId].gameState.round = 1;
         rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
+        rooms[roomId].maxRound = maxRound;
         
         //if game is started using a user-created deck, query the customPrompt table for that deck
         if (useUserCreatedDeck) {
@@ -277,6 +280,80 @@ function startRound1(roomId) {
     console.log(`Starting Round 1 for Room ${roomId}`);
     rooms[roomId].gameState.round = 1;
     rooms[roomId].gameState.submittedUsers = []; // Initialize or reset the submitted users list
+}
+
+function handleRoundSubmissions(roomId, username, gifUrl, round){
+    if (!rooms[roomId].gameState.submissions[round]) {
+        rooms[roomId].gameState.submissions[round] = {};
+    }
+    rooms[roomId].gameState.submissions[round][username] = gifUrl;
+
+    // Track that this user has submitted
+    if (!rooms[roomId].gameState.submittedUsers.includes(username)) {
+        rooms[roomId].gameState.submittedUsers.push(username);
+    }
+
+    console.log(`User ${username} submitted a GIF for Round ${round} in Room ${roomId}. Total submitted: ${rooms[roomId].gameState.submittedUsers.length}/${rooms[roomId].users.length}`);
+
+    // Check if all users have submitted for this round
+    if (rooms[roomId].gameState.submittedUsers.length === rooms[roomId].users.length) {
+        console.log(`All users submitted for Round ${round} in Room ${roomId}`);
+        if(round == rooms[roomId].maxRound){
+            setTimeout(() => {
+                startVoting(roomId);
+            }, 1000);
+        }
+        else{
+            setTimeout(() => {
+                startRound(roomId, round + 1);
+            }, 1000);
+        }
+        
+    }
+}
+
+async function startRound(roomId, round){
+    console.log(`Starting Round ${round} for Room ${roomId}`);
+    rooms[roomId].gameState.round = round;
+    rooms[roomId].gameState.submittedUsers = []; // Reset submitted users for the new round
+    let deckId = rooms[roomId].gameState.deck;
+
+    try {
+        let result;
+        console.log("is this room using custom decks?");
+        console.log(rooms[roomId].gameState.useCustomDeck);
+        if (rooms[roomId].gameState.useCustomDeck) {
+            // Query from customPrompts table if using custom deck
+            result = await pool.query(`
+                SELECT prompt
+                FROM customPrompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+        } else {
+            // Query from standard prompts table if not using custom deck
+            result = await pool.query(`
+                SELECT prompt
+                FROM prompts
+                WHERE deck_id = $1
+                ORDER BY RANDOM()
+                LIMIT 1
+            `, [deckId]);
+        }
+        
+        if (result.rows.length > 0) {
+            io.to(roomId).emit('next-round', { round: round, prompt: result.rows[0].prompt });
+            console.log(`Game started in Room ${roomId}, with Deck #${deckId}, starting Round ${round} with ${rooms[roomId].users.length} users.`);
+        } else {
+            console.error(`No prompts found for Deck ${deckId} in Room ${roomId}`);
+        }
+    } catch (error) {
+        console.error('Error fetching prompt from the database:', error);
+        res.status(500).send('Failed to start the game');
+        return;
+    }
+    
 }
 
 // Handle Round 1 Submissions
@@ -448,17 +525,7 @@ app.post('/submit-gif', (req, res) => {
     let { roomId, username, gifUrl } = req.body;
     if (rooms[roomId]) {
         let round = rooms[roomId].gameState.round;
-        switch (round) {
-            case 1:
-                handleRound1Submission(roomId, username, gifUrl);
-                break;
-            case 2:
-                handleRound2Submission(roomId, username, gifUrl);
-                break;
-            case 3:
-                handleRound3Submission(roomId, username, gifUrl);
-                break;
-        }
+        handleRoundSubmissions(roomId, username, gifUrl, round);
         res.status(200).send('GIF submitted');
     } else {
         res.status(404).send('Room not found');

@@ -164,6 +164,12 @@
     <button id="start-game">Start Game</button>
     <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
     <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
+
+    <div id="rounds-container" class="hidden">
+    <label for="num-rounds">Number of Rounds:</label>
+    <input type="number" id="num-rounds" min="1" max="10" value="3">
+    </div>
+
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
         <input id="gif-search" type="text" placeholder="Search for a GIF">
@@ -177,16 +183,16 @@
     </div>
     <div id="custom-prompt-div" class="hidden">
         <h2>Create a deck with 10 unique prompts to use in your game!</h2>
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
-        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
+        <input class="custom-prompt-input" type="text" placeholder="Enter Prompt">
         <p>Name your deck something creative!</p>
         <input id="custom-deck-name" type="text" placeholder="Coolest Deck Ever">
         <p>Check out decks other users have made!!</p>
@@ -320,20 +326,35 @@
         fetch(`/room-info/${roomId}`)
             .then(response => response.json())
             .then(data => {
+                if (data.ownerId === userId) {
+                    document.getElementById('rounds-container').classList.remove('hidden');
+                }
                 let usersList = document.getElementById('users-list');
                 data.users.forEach(user => { //go through the list of users and display them
                     let listItem = document.createElement('li');
                     listItem.textContent = `${user.username}`;
                     usersList.appendChild(listItem);
                 });
+                if (data.ownerId != userId) {
+                    let useCustomPromptElement = document.getElementById('use-custom-prompt');
+                    let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+                    let startButton = document.getElementById('start-game');
+                    useCustomPromptElement.classList.add('hidden');
+                    useCustomPromptText.classList.add('hidden');
+                    startButton.classList.add('hidden');
+                }
             })
             .catch(error => console.error('Error fetching room info:', error));
 
         //start game function
         document.getElementById('start-game').addEventListener('click', () => {
+
+            document.getElementById('rounds-container').classList.add('hidden');
+
             let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
             let useCustomPromptElement = document.getElementById('use-custom-prompt');
             let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+            let numRounds = document.getElementById('num-rounds').value;
             let customPromptDiv = document.getElementById('custom-prompt-div');
             let customPrompts = [];
             let customDeckName = document.getElementById('custom-deck-name').value.trim();
@@ -366,7 +387,8 @@
                         username: username,
                         deckName: null,
                         useUserCreatedDeck: true,
-                        deckId: selectedDeckId
+                        deckId: selectedDeckId,
+                        maxRound: numRounds
                     })
                 })
                 .then(response => {
@@ -414,7 +436,8 @@
                                 username: username,
                                 deckName: customDeckName,
                                 useUserCreatedDeck: false,
-                                deckId: null
+                                deckId: null,
+                                maxRound: numRounds
                             })
                         })
                         .then(response => {
@@ -446,7 +469,8 @@
                         username: username,
                         deckName: null,
                         useUserCreatedDeck: false,
-                        deckId: null
+                        deckId: null,
+                        maxRound: numRounds
                     })
                 })
                 .then(response => {
@@ -598,7 +622,6 @@
                 let useCustomPromptElement = document.getElementById('use-custom-prompt');
                 let useCustomPromptText = document.getElementById('use-custom-prompt-text');
                 let startButton = document.getElementById('start-game');
-
                 useCustomPromptElement.classList.add('hidden');
                 useCustomPromptText.classList.add('hidden');
                 startButton.classList.add('hidden');
@@ -829,7 +852,6 @@
             document.getElementById('chat-input-container').style.display = "none";
             document.getElementById('toggle-chat').style.display = "block";
         });
-
     </script>
 </body>
 </html>
