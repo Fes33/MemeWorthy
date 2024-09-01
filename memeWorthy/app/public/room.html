@@ -44,6 +44,19 @@
             src: url('/fonts/ChauPhilomeneOne-Regular.ttf') format('truetype');
         }
 
+        #toggle-chat {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
         #chat-sidebar {
             position: fixed;
             right: 0;
@@ -51,9 +64,9 @@
             width: 300px;
             height: 97%;
             background-color: white;
-            border-radius: 15px;
+            border-radius: 15px 15px 0 0;
             color: black;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             padding: 10px;
@@ -64,27 +77,71 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding-bottom: 10px;
         }
 
         #chat-messages {
             flex: 1;
-            overflow-y: auto;
-            align-items: start;
-            margin-bottom: 10px;
+            overflow-y: auto; 
+            overflow-x: hidden; 
+            word-wrap: break-word; 
+            margin-bottom: 60px; 
+            max-height: calc(97% - 100px);
+        }
+
+        #chat-input-container {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 300px;
+            padding: 10px;
+            background-color: white;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            border-radius: 0 0 15px 0px;
         }
 
         #chat-input {
-            width: calc(100% - 10px);
-            background-color: black;
-            color: white;
-            border-radius: 15px;
+            flex: 1;
             padding: 10px;
+            border-radius: 15px;
+            border: 1px solid #ccc;
+            margin-right: 10px;
         }
 
         #send-chat {
-            width: 50px;
             padding: 10px;
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
         }
+
+        .chat-message {
+            text-align: left;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+
+        .chat-message .sender-name {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        #notification-badge {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background-color: gold;
+            color: white;
+            border-radius: 50%;
+            padding: 5px 10px;
+            font-size: 12px;
+            display: none;
+        }
+
     </style>
 </head>
 <body>
@@ -99,7 +156,14 @@
     <p class="room-info">Users in this room:</p>
     <ul id="users-list" class="user-list"></ul>
 
+    <label for="max-players" id="max-players-text">Set Max Number of Players:</label>
+    <input type="number" id="max-players-number" min="1">
+    <button id="set-max-players">Set</button>
+
+
     <button id="start-game">Start Game</button>
+    <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
+    <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
         <input id="gif-search" type="text" placeholder="Search for a GIF">
@@ -111,6 +175,24 @@
         <div id="gif-votes"></div>
         <button id="submit-votes">Submit Votes</button>
     </div>
+    <div id="custom-prompt-div" class="hidden">
+        <h2>Create a deck with 10 unique prompts to use in your game!</h2>
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <input class="custom-prompt-input" type="text" placeholder="Search for a GIF">
+        <p>Name your deck something creative!</p>
+        <input id="custom-deck-name" type="text" placeholder="Coolest Deck Ever">
+        <p>Check out decks other users have made!!</p>
+        <div id="user-made-decks"></div>
+        <button id="load-more-decks">Load More</button>
+    </div>
 
     <div id="chat-sidebar">
         <div id="chat-header">
@@ -118,17 +200,38 @@
             <button id="close-chat">Close</button>
         </div>
         <div id="chat-messages"></div>
-        <input id="chat-input" type="text" placeholder="Type a message...">
-        <button id="send-chat">Send</button>
+        <div id="chat-input-container">
+            <input id="chat-input" type="text" placeholder="Type a message...">
+            <button id="send-chat">Send</button>
+        </div>
     </div>
 
-    <button id="toggle-chat">Open Chat</button>
+    <button id="toggle-chat">
+        Open Chat
+        <span id="notification-badge" style="display: none;">1</span>
+    </button>
 
     <script src="/socket.io/socket.io.js"></script>
+
     <script>
         let roomId;
+        let username;
         let userId;
-        console.log("hello");
+
+        //this is a secret dev tool used to activate delete deck button
+        //mainly used for debugging and getting rid of decks that were created
+        //during testing/debugging
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                const deleteButtons = document.querySelectorAll('.delete-deck-button');
+                deleteButtons.forEach(button => {
+                    button.classList.remove('hidden'); // Show each button
+                });
+                console.log("Delete buttons are now visible.");
+            }
+        });
+
+
         //gets the room code by splitting the current URL
         let pathSegments = window.location.pathname.split('/');
         roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
@@ -136,15 +239,36 @@
         
         //extract userId from url query strings
         let urlParams = new URLSearchParams(window.location.search);
+        username = urlParams.get('username');
         userId = urlParams.get('userId');
-        document.getElementById('current-user').textContent = `Welcome ${userId}!`; //display current user
+        document.getElementById('current-user').textContent = `Welcome ${username}!`; //display current user
+
 
         //initialize Socket.io
         const socket = io();
 
+        //Set Max number of players
+        document.getElementById('set-max-players').addEventListener('click', () => {
+            let maxPlayers = parseInt(document.getElementById('max-players-number').value);
+            fetch('/set-max-players', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, maxPlayers })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Max number of players updated');
+                } else {
+                    alert(data.error);
+                }
+            })
+            .catch(error => console.error('Error setting max players:', error));
+        });
+
+
         //join the room
-        socket.emit('join-room', {roomId, userId});
-        console.log("im joining room");
+        socket.emit('join-room', {roomId, username});
 
         //this listens for users joined. when someone clicks on join room, the server sends an event
         //to all clients connected to the room and it updates the list.
@@ -153,8 +277,30 @@
             let listItem = document.createElement('li');
             listItem.textContent = `${data.username}`;
             usersList.appendChild(listItem);
-            console.log("someone joined the room");
-            console.log(data.username);
+        });
+
+        //this will remove the user that left from the list of users displayed
+        socket.on('user-left', (data) => {
+            let usersList = document.getElementById('users-list');
+            let users = usersList.getElementsByTagName('li');
+            for (let user of users) { //goes through list, compares the names, and deletes once found.
+                if (user.textContent === data.userId) {
+                    usersList.removeChild(user);
+                    break;
+                }
+            }
+        });
+
+        //this will remove the user that left from the list of users displayed
+        socket.on('user-left', (data) => {
+            let usersList = document.getElementById('users-list');
+            let users = usersList.getElementsByTagName('li');
+            for (let user of users) { //goes through list, compares the names, and deletes once found.
+                if (user.textContent === data.userId) {
+                    usersList.removeChild(user);
+                    break;
+                }
+            }
         });
 
         //this will remove the user that left from the list of users displayed
@@ -183,103 +329,428 @@
             })
             .catch(error => console.error('Error fetching room info:', error));
 
+        //start game function
         document.getElementById('start-game').addEventListener('click', () => {
-            fetch('/start-game', {
+            let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
+            let useCustomPromptElement = document.getElementById('use-custom-prompt');
+            let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+            let customPromptDiv = document.getElementById('custom-prompt-div');
+            let customPrompts = [];
+            let customDeckName = document.getElementById('custom-deck-name').value.trim();
+            let useUserCreatedDeck = false;
+            let selectedDeckId = null;
+
+            
+            // check if any of the deckSelect checkboxes are selected
+            const selectedDeck = document.querySelector('input[name="deckSelect"]:checked');
+            if (selectedDeck) {
+                useUserCreatedDeck = true;
+                selectedDeckId = selectedDeck.value;
+            }
+            // Check if a user-created deck is selected
+            //if it is, hide the custompromptdiv and start the game with the appropriate json properties
+            if (useUserCreatedDeck) {
+                
+                customPromptDiv.classList.add('hidden');
+                useCustomPromptElement.classList.add('hidden');
+                useCustomPromptText.classList.add('hidden');
+                fetch('/start-game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        roomId,
+                        useCustomPrompt: false, // User is using a user-created deck
+                        customPrompts: null,
+                        username: username,
+                        deckName: null,
+                        useUserCreatedDeck: true,
+                        deckId: selectedDeckId
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Game started with user-created deck');
+                    } else {
+                        console.error('Error starting game with user-created deck');
+                    }
+                });
+            //if no userCreatedDeck is used, check if the user created one himself
+            } else if (useCustomPrompt) {
+                let promptInputs = customPromptDiv.getElementsByClassName('custom-prompt-input');
+                let allFilled = true;
+                
+                //checks if all input fields are filled
+                for (let i = 0; i < promptInputs.length; i++) {
+                    const promptValue = promptInputs[i].value.trim();
+                    if (promptValue === '') {
+                        allFilled = false;
+                        break;
+                    }
+                    customPrompts.push(promptValue);
+                }
+
+                if (allFilled) {
+                    //if no name is given for the deck, send an alert.
+                    if (customDeckName === '') { 
+                        alert('Please pick a name for this deck!');
+                    } else {
+                        //if all input fields are filled, and a name has been given for the deck
+                        //hide the custom prompt div and start the game with the appropriate json
+                        customPromptDiv.classList.add('hidden');
+                        customPromptDiv.classList.add('hidden');
+                        useCustomPromptElement.classList.add('hidden');
+                        useCustomPromptText.classList.add('hidden');
+                        fetch('/start-game', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                roomId,
+                                useCustomPrompt,
+                                customPrompts: useCustomPrompt ? customPrompts : null,
+                                username: username,
+                                deckName: customDeckName,
+                                useUserCreatedDeck: false,
+                                deckId: null
+                            })
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                console.log('Game started with a new custom-made deck');
+                            } else {
+                                console.error('Error starting game with custom prompts');
+                            }
+                        });
+                    }
+                } else {
+                    alert('Please fill in all the prompt fields.');
+                }
+                //if user is not using custom prompts, start the game wit default settings.
+            } else {
+
+                customPromptDiv.classList.add('hidden');
+                useCustomPromptElement.classList.add('hidden');
+                useCustomPromptText.classList.add('hidden');
+                fetch('/start-game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        roomId,
+                        useCustomPrompt,
+                        customPrompts: null,
+                        username: username,
+                        deckName: null,
+                        useUserCreatedDeck: false,
+                        deckId: null
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Game started with a random standard deck');
+                    } else {
+                        console.error('Error starting game with standard deck');
+                    }
+                });
+            }
+        });
+        
+        //If the use custom prompts checkbox is ticket, activate/deactivate custom prompt div
+        document.getElementById('use-custom-prompt').addEventListener('change', function() {
+            var customPromptDiv = document.getElementById('custom-prompt-div');
+            
+            if (this.checked) {
+                customPromptDiv.classList.remove('hidden');
+            } else {
+                customPromptDiv.classList.add('hidden');
+            }
+        });
+
+        //This listener populates the custom prompts div with user created decks.
+        document.addEventListener('DOMContentLoaded', () => {
+            let offset = 0;
+            let selectedDeckId = null;
+
+            //this function loads up to 3 custom decks
+            const loadDecks = () => {
+                fetch(`/get-user-decks?offset=${offset}`)
+                    .then(response => response.json())
+                    .then(decks => {
+                        
+                        const userMadeDecksDiv = document.getElementById('user-made-decks');
+
+                        decks.forEach(deck => {
+                            const deckDiv = document.createElement('div');
+                            deckDiv.className = 'user-deck';
+
+                            const deckTitle = document.createElement('h3');
+                            deckTitle.textContent = `Deck Name: ${deck.deckName} (by ${deck.creator})`;
+
+                            //A checkbox is also generated next to the name, this is how user selects the deck
+                            const deckCheckbox = document.createElement('input');
+                            deckCheckbox.type = 'checkbox';
+                            deckCheckbox.name = 'deckSelect';
+                            deckCheckbox.value = deck.id;
+                            
+                            deckCheckbox.addEventListener('change', function () {
+                                if (this.checked) {
+                                    selectedDeckId = this.value;
+                                    // Uncheck all other checkboxes
+                                    document.querySelectorAll('input[name="deckSelect"]').forEach(checkbox => {
+                                        if (checkbox !== this) {
+                                            checkbox.checked = false;
+                                        }
+                                    });
+                                } else {
+                                    selectedDeckId = null;
+                                }
+                            });
+ 
+                            //I'm also creating a hidden "delete deck" button only for devs
+                            const deleteButton = document.createElement('button');
+                            deleteButton.id = `delete-deck-button-${deck.id}`;
+                            deleteButton.value = deck.id;
+                            deleteButton.className = 'delete-deck-button hidden';
+                            deleteButton.textContent = 'Delete Deck';
+                            
+                            //add an event for the button to delete that deck
+                            deleteButton.addEventListener('click', function() {
+                                const deckId = this.value; // Get the deck ID from the button's value
+                                if (confirm(`Are you sure you want to delete deck ID: ${deckId}?`)) {
+                                    fetch('/delete-deck', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ deckId: deckId }),
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            alert('Deck deleted successfully');
+                                            // Optionally remove the deck from the DOM
+                                            deckDiv.remove();
+                                        } else {
+                                            alert('Error deleting deck');
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                    });
+                                }
+                            });
+                            
+                            deckDiv.appendChild(deckCheckbox);
+                            deckDiv.appendChild(deckTitle);
+                            deckDiv.appendChild(deleteButton);
+                            
+                            //add the decks as a list
+                            const promptList = document.createElement('ul');
+                            promptList.style.listStyleType = 'none';
+                            deck.prompts.forEach(prompt => {
+                                const promptItem = document.createElement('li');
+                                promptItem.textContent = prompt;
+                                promptList.appendChild(promptItem);
+                            });
+
+                            deckDiv.appendChild(promptList);
+                            userMadeDecksDiv.appendChild(deckDiv);
+                        });
+
+                        if (decks.length < 3) {
+                            document.getElementById('load-more-decks').disabled = true; // Disable the button if there are no more decks to load
+                        }
+
+                        offset += 3; // Increase the offset for the next batch
+                    })
+                    .catch(error => {
+                        console.error('Error fetching decks:', error);
+                    });
+            };
+
+            // Load the first batch when the page loads
+            loadDecks();
+
+            // Add event listener to "Load More" button
+            document.getElementById('load-more-decks').addEventListener('click', () => {
+                loadDecks();
+            });
+        });
+
+
+        //this shows the custom prompt functionality only to room creator
+        //this fetch fetches the room creator and compares it against the current user
+        fetch(`/room-info/${roomId}`)
+        .then(response => {
+            // Check if the response is successful
+            if (!response.ok) {
+                throw new Error('Room not found');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Print the ownerId from the received data
+            if(data.ownerId != userId){
+                let useCustomPromptElement = document.getElementById('use-custom-prompt');
+                let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+                let startButton = document.getElementById('start-game');
+
+                useCustomPromptElement.classList.add('hidden');
+                useCustomPromptText.classList.add('hidden');
+                startButton.classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            // Handle any errors
+            console.error('Error:', error.message);
+        });
+
+        // When the game starts, hide the start button and show the prompt and GIF search.
+        socket.on('game-started', (data) => {
+            let maxPlayersText = document.getElementById('max-players-text');
+            let maxPlayersNumber = document.getElementById('max-players-number');
+            let maxPlayerButton = document.getElementById('set-max-players');
+
+            maxPlayersText.classList.add('hidden');
+            maxPlayersNumber.classList.add('hidden');
+            maxPlayerButton.classList.add('hidden');
+
+            document.getElementById('start-game').classList.add('hidden');
+            document.getElementById('game-prompt').textContent = data.prompt;
+            document.getElementById('game-prompt').classList.remove('hidden');
+            document.getElementById('gif-container').classList.remove('hidden');
+        });
+
+        // Handler for next round
+        socket.on('next-round', (data) => {
+            console.log(`Next round event received for user: ${username}, Round: ${data.round}`);
+            document.getElementById('game-prompt').textContent = data.prompt;
+            document.getElementById('game-prompt').classList.remove('hidden');
+
+            // Ensure previous UI state is cleaned up before showing new search bar
+            document.getElementById('gif-container').classList.remove('hidden');
+            document.getElementById('gif-results').innerHTML = ''; // Clear previous search results
+        });
+
+        // When the voting phase starts, hide the game prompt and GIF search, then show the voting interface.
+        socket.on('voting-start', (data) => {
+            document.getElementById('game-prompt').classList.add('hidden');
+            document.getElementById('gif-container').classList.add('hidden');
+            document.getElementById('voting-container').classList.remove('hidden');
+
+            let gifVotes = document.getElementById('gif-votes');
+            gifVotes.innerHTML = '';
+            Object.entries(data.submissions).forEach(([round, submissions]) => {
+                Object.entries(submissions).forEach(([submissionUserId, gifUrl]) => {
+                    if (submissionUserId === username) {
+                        return; // Skip this iteration if the user is trying to vote on their own submission
+                    }
+
+                    let div = document.createElement('div');
+                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${submissionUserId}<br>Round: ${round}<br>`;
+                    let input = document.createElement('input');
+                    input.type = 'number';
+                    input.min = 1;
+                    input.max = 10;
+                    input.dataset.userId = submissionUserId;
+                    input.dataset.round = round;
+                    div.appendChild(input);
+                    gifVotes.appendChild(div);
+                });
+            });
+        });
+
+        // When a GIF is submitted, hide the GIF search.
+        
+        function submitGif(gifUrl) {
+            fetch('/submit-gif', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ roomId })
+                body: JSON.stringify({ roomId, username, gifUrl })
             })
             .then(response => {
                 if (response.ok) {
-                    console.log('Game started');
+                    document.getElementById('gif-container').classList.add('hidden');
+                    console.log(`GIF submitted by user ${username} in Room ${roomId}`);
                 } else {
-                    console.error('Error starting game');
+                    console.error('Error submitting GIF');
                 }
             });
-        });
-
-        // When the game starts, hide the start button and show the prompt and GIF search.
-socket.on('game-started', (data) => {
-    document.getElementById('start-game').classList.add('hidden');
-    document.getElementById('game-prompt').textContent = data.prompt;
-    document.getElementById('game-prompt').classList.remove('hidden');
-    document.getElementById('gif-container').classList.remove('hidden');
-});
-
-// Handle the next round starting. Update the prompt and show the GIF search.
-socket.on('next-round', (data) => {
-    console.log('Next round starting');  // Adding a log to verify the event
-    document.getElementById('game-prompt').textContent = data.prompt;
-    document.getElementById('game-prompt').classList.remove('hidden');
-    document.getElementById('gif-container').classList.remove('hidden');
-    document.getElementById('gif-results').innerHTML = ''; // Clear previous search results
-});
-
-// When the voting phase starts, hide the game prompt and GIF search, then show the voting interface.
-socket.on('voting-start', (data) => {
-    document.getElementById('game-prompt').classList.add('hidden');
-    document.getElementById('gif-container').classList.add('hidden');
-    document.getElementById('voting-container').classList.remove('hidden');
-
-    let gifVotes = document.getElementById('gif-votes');
-    gifVotes.innerHTML = '';
-    Object.entries(data.submissions).forEach(([round, submissions]) => {
-        Object.entries(submissions).forEach(([userId, gifUrl]) => {
-            let div = document.createElement('div');
-            div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${userId}<br>Round: ${round}<br>`;
-            let input = document.createElement('input');
-            input.type = 'number';
-            input.min = 1;
-            input.max = 10;
-            input.dataset.userId = userId;
-            input.dataset.round = round;
-            div.appendChild(input);
-            gifVotes.appendChild(div);
-        });
-    });
-});
-
-// When a GIF is submitted, hide the GIF search.
-function submitGif(gifUrl) {
-    fetch('/submit-gif', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ roomId, userId, gifUrl })
-    })
-    .then(response => {
-        if (response.ok) {
-            document.getElementById('gif-container').classList.add('hidden');
-        } else {
-            console.error('Error submitting GIF');
         }
-    });
-}
 
-document.getElementById('search-gif').addEventListener('click', () => {
-    let query = document.getElementById('gif-search').value;
-    fetch(`/search-giphy?query=${query}`)
-    .then(response => response.json())
-    .then(data => {
-        let gifResults = document.getElementById('gif-results');
-        gifResults.innerHTML = '';
-        data.data.forEach(gif => {
-            let img = document.createElement('img');
-            img.src = gif.images.fixed_height.url;
-            img.addEventListener('click', () => {
-                submitGif(gif.images.fixed_height.url);
-            });
-            gifResults.appendChild(img);
+        // Function to fetch gifs based on user search input
+        document.getElementById('search-gif').addEventListener('click', () => {
+            let query = document.getElementById('gif-search').value;
+            fetch(`/search-giphy?query=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                let gifResults = document.getElementById('gif-results');
+                gifResults.innerHTML = '';
+                data.data.forEach(gif => {
+                    let img = document.createElement('img');
+                    img.src = gif.images.fixed_height.url;
+                    img.addEventListener('click', () => {
+                        submitGif(gif.images.fixed_height.url);
+                    });
+                    gifResults.appendChild(img);
+                });
+            })
+            .catch(error => console.error('Error searching Giphy:', error));
         });
-    })
-    .catch(error => console.error('Error searching Giphy:', error));
-});
 
+        // Once your vote is succesfully submitted, you get a message saying it has been
+        socket.on('vote-submitted', (data) => {
+            console.log(`Vote submitted by user: ${data.username}`);
+            if (data.username === username) {
+                document.getElementById('voting-container').classList.add('hidden');
+                document.getElementById('game-prompt').textContent = 'Your vote has been submitted!';
+                document.getElementById('game-prompt').classList.remove('hidden');
+            }
+        });
 
+        // Function to submit votes
+        document.getElementById('submit-votes').addEventListener('click', () => {
+            let votes = {};
+            let inputs = document.querySelectorAll('#gif-votes input[type="number"]');
+            inputs.forEach(input => {
+                let userId = input.dataset.userId;
+                let score = parseInt(input.value);
+                score = Math.max(0, Math.min(score, 10));
+                if (!isNaN(score)) {
+                    if (!votes[userId]) {
+                        votes[userId] = 0;
+                    }
+                    votes[userId] += score;
+                }
+            });
+
+            console.log(`Submitting votes: ${JSON.stringify(votes)}`);
+            fetch('/submit-votes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId, username, votes })
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Votes submitted successfully');
+                } else {
+                    console.error('Error submitting votes');
+                }
+            })
+            .catch(error => console.error('Error in submit-votes fetch:', error));
+        });
+
+        // When game is over, display the scores
         socket.on('game-over', (data) => {
+            console.log('Game over event received:', data); // Log the received data
             let scoresDiv = document.createElement('div');
             scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
             Object.entries(data.scores).forEach(([userId, score]) => {
@@ -288,31 +759,77 @@ document.getElementById('search-gif').addEventListener('click', () => {
             document.body.appendChild(scoresDiv);
         });
 
+
         // Chat functionality
-        document.getElementById('toggle-chat').addEventListener('click', () => {
-            document.getElementById('chat-sidebar').style.display = "block";
-        });
-
-        document.getElementById('close-chat').addEventListener('click', () => {
-            document.getElementById('chat-sidebar').style.display = "none";
-        });
-
-        document.getElementById('send-chat').addEventListener('click', () => {
+        // Send chat message
+        function sendMessage() {
             let message = document.getElementById('chat-input').value;
             if (message.trim()) {
-                socket.emit('chat-message', { roomId, userId, message });
+                socket.emit('chat-message', { roomId, username, message });
                 document.getElementById('chat-input').value = '';
+            }
+        }
+
+        document.getElementById('send-chat').addEventListener('click', sendMessage);
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
             }
         });
 
         // Listen for incoming chat messages
+        let unreadMessages = 0;
         socket.on('chat-message', (data) => {
             let chatMessages = document.getElementById('chat-messages');
             let messageDiv = document.createElement('div');
-            messageDiv.textContent = `${data.username}: ${data.message}`;
+            messageDiv.classList.add('chat-message');
+            
+            // Create sender name span
+            let senderSpan = document.createElement('span');
+            senderSpan.classList.add('sender-name');
+            senderSpan.textContent = data.username;
+            
+            // Create message text node
+            let messageText = document.createTextNode(`: ${data.message}`);
+            
+            // Append sender name and message text to the message
+            messageDiv.appendChild(senderSpan);
+            messageDiv.appendChild(messageText);
+            
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+            
+            // Scroll to the bottom of the chat after message is added
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // if chat sidebar closed notify
+            if (document.getElementById('chat-sidebar').style.display != "block") {
+                // Increment unread messages and update badge
+                unreadMessages++;
+                let notificationBadge = document.getElementById('notification-badge');
+                notificationBadge.textContent = unreadMessages;
+                notificationBadge.style.display = "inline";
+            }
+
         });
+
+        // Toggle chat sidebar visibility
+        document.getElementById('toggle-chat').addEventListener('click', () => {
+            document.getElementById('chat-sidebar').style.display = "block";
+            document.getElementById('chat-input-container').style.display = "flex";
+            document.getElementById('toggle-chat').style.display = "none";
+
+            // Reset unread messages and hide badge
+            unreadMessages = 0;
+            document.getElementById('notification-badge').style.display = "none";
+        });
+
+        // Close chat sidebar
+        document.getElementById('close-chat').addEventListener('click', () => {
+            document.getElementById('chat-sidebar').style.display = "none";
+            document.getElementById('chat-input-container').style.display = "none";
+            document.getElementById('toggle-chat').style.display = "block";
+        });
+
     </script>
 </body>
 </html>
