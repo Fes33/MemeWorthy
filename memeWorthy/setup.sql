@@ -9,6 +9,7 @@ CREATE DATABASE memelaunch;
 --this table will store the names of the decks
 CREATE TABLE decks (
     id SERIAL PRIMARY KEY,
+    
     name TEXT NOT NULL
 );
 

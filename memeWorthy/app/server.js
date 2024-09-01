@@ -94,6 +94,7 @@ app.post('/create-room', (req, res) => {
     rooms[roomId] = {
         ownerId: userId,
         users: [{ userId, username }],
+        maxPlayers: 5, // Default Max
         maxRound: 3,
         gameState: {
             deck: deck,
@@ -108,15 +109,36 @@ app.post('/create-room', (req, res) => {
     res.status(200).json({ roomId, userId });
 });
 
+//post request handler for setting max players
+app.post('/set-max-players', (req, res) => {
+    let { roomId, maxPlayers } = req.body;
+    if (rooms[roomId]) {
+        //valid number
+        if (maxPlayers >= rooms[roomId].users.length) {
+            rooms[roomId].maxPlayers = maxPlayers;
+            res.status(200).json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Max players cannot be less than current number of users' });
+        }
+    } else {
+        res.status(404).send('Room not found');
+    }
+});
+
 //post request handler to join a room
 app.post('/join-room', (req, res) => {
     let { roomId, username } = req.body;
     if (rooms[roomId]) {
-        let userId = uuidv4();
-        rooms[roomId].users.push({ userId, username });
-        io.to(roomId).emit('user-joined', { userId, username });
-        console.log(`${username} (${userId}) joined Room ${roomId}`);
-        res.status(200).json({ userId, roomId });
+        //check if room full
+        if (rooms[roomId].users.length < rooms[roomId].maxPlayers) {
+            let userId = uuidv4();
+            rooms[roomId].users.push({ userId, username });
+            io.to(roomId).emit('user-joined', { userId, username });
+            console.log(`${username} (${userId}) joined Room ${roomId}`);
+            res.status(200).json({ userId, roomId });
+        } else {
+            res.status(403).send('Room is full');
+        }
     } else {
         res.status(404).send('Room not found');
     }
@@ -142,6 +164,7 @@ app.get('/room-info/:roomId', (req, res) => {
 
 //post request handler to start the game
 app.post('/start-game', (req, res) => {
+
     let { roomId, useCustomPrompt, customPrompts, username, deckName, useUserCreatedDeck, deckId, maxRound } = req.body;
 
     if (rooms[roomId]) {
@@ -331,7 +354,6 @@ async function startRound(roomId, round){
         return;
     }
     
-
 }
 
 // Handle Round 1 Submissions

@@ -44,6 +44,19 @@
             src: url('/fonts/ChauPhilomeneOne-Regular.ttf') format('truetype');
         }
 
+        #toggle-chat {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
         #chat-sidebar {
             position: fixed;
             right: 0;
@@ -51,9 +64,9 @@
             width: 300px;
             height: 97%;
             background-color: white;
-            border-radius: 15px;
+            border-radius: 15px 15px 0 0;
             color: black;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             padding: 10px;
@@ -64,27 +77,71 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding-bottom: 10px;
         }
 
         #chat-messages {
             flex: 1;
-            overflow-y: auto;
-            align-items: start;
-            margin-bottom: 10px;
+            overflow-y: auto; 
+            overflow-x: hidden; 
+            word-wrap: break-word; 
+            margin-bottom: 60px; 
+            max-height: calc(97% - 100px);
+        }
+
+        #chat-input-container {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 300px;
+            padding: 10px;
+            background-color: white;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            border-radius: 0 0 15px 0px;
         }
 
         #chat-input {
-            width: calc(100% - 10px);
-            background-color: black;
-            color: white;
-            border-radius: 15px;
+            flex: 1;
             padding: 10px;
+            border-radius: 15px;
+            border: 1px solid #ccc;
+            margin-right: 10px;
         }
 
         #send-chat {
-            width: 50px;
             padding: 10px;
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
         }
+
+        .chat-message {
+            text-align: left;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+
+        .chat-message .sender-name {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        #notification-badge {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background-color: gold;
+            color: white;
+            border-radius: 50%;
+            padding: 5px 10px;
+            font-size: 12px;
+            display: none;
+        }
+
     </style>
 </head>
 <body>
@@ -99,13 +156,20 @@
     <p class="room-info">Users in this room:</p>
     <ul id="users-list" class="user-list"></ul>
 
+    <label for="max-players" id="max-players-text">Set Max Number of Players:</label>
+    <input type="number" id="max-players-number" min="1">
+    <button id="set-max-players">Set</button>
+
+
     <button id="start-game">Start Game</button>
     <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
     <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
+
     <div id="rounds-container" class="hidden">
     <label for="num-rounds">Number of Rounds:</label>
     <input type="number" id="num-rounds" min="1" max="10" value="3">
     </div>
+
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
         <input id="gif-search" type="text" placeholder="Search for a GIF">
@@ -135,23 +199,25 @@
         <div id="user-made-decks"></div>
         <button id="load-more-decks">Load More</button>
     </div>
-    
+
     <div id="chat-sidebar">
         <div id="chat-header">
             <h2>Chat</h2>
             <button id="close-chat">Close</button>
         </div>
         <div id="chat-messages"></div>
-        <input id="chat-input" type="text" placeholder="Type a message...">
-        <button id="send-chat">Send</button>
+        <div id="chat-input-container">
+            <input id="chat-input" type="text" placeholder="Type a message...">
+            <button id="send-chat">Send</button>
+        </div>
     </div>
 
-    <button id="toggle-chat">Open Chat</button>
+    <button id="toggle-chat">
+        Open Chat
+        <span id="notification-badge" style="display: none;">1</span>
+    </button>
 
     <script src="/socket.io/socket.io.js"></script>
-
-
-
 
     <script>
         let roomId;
@@ -186,6 +252,26 @@
 
         //initialize Socket.io
         const socket = io();
+
+        //Set Max number of players
+        document.getElementById('set-max-players').addEventListener('click', () => {
+            let maxPlayers = parseInt(document.getElementById('max-players-number').value);
+            fetch('/set-max-players', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, maxPlayers })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Max number of players updated');
+                } else {
+                    alert(data.error);
+                }
+            })
+            .catch(error => console.error('Error setting max players:', error));
+        });
+
 
         //join the room
         socket.emit('join-room', {roomId, username});
@@ -548,6 +634,14 @@
 
         // When the game starts, hide the start button and show the prompt and GIF search.
         socket.on('game-started', (data) => {
+            let maxPlayersText = document.getElementById('max-players-text');
+            let maxPlayersNumber = document.getElementById('max-players-number');
+            let maxPlayerButton = document.getElementById('set-max-players');
+
+            maxPlayersText.classList.add('hidden');
+            maxPlayersNumber.classList.add('hidden');
+            maxPlayerButton.classList.add('hidden');
+
             document.getElementById('start-game').classList.add('hidden');
             document.getElementById('game-prompt').textContent = data.prompt;
             document.getElementById('game-prompt').classList.remove('hidden');
@@ -690,31 +784,74 @@
 
 
         // Chat functionality
-        document.getElementById('toggle-chat').addEventListener('click', () => {
-            document.getElementById('chat-sidebar').style.display = "block";
-        });
-
-        document.getElementById('close-chat').addEventListener('click', () => {
-            document.getElementById('chat-sidebar').style.display = "none";
-        });
-
-        document.getElementById('send-chat').addEventListener('click', () => {
+        // Send chat message
+        function sendMessage() {
             let message = document.getElementById('chat-input').value;
             if (message.trim()) {
                 socket.emit('chat-message', { roomId, username, message });
                 document.getElementById('chat-input').value = '';
             }
+        }
+
+        document.getElementById('send-chat').addEventListener('click', sendMessage);
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
         });
 
         // Listen for incoming chat messages
+        let unreadMessages = 0;
         socket.on('chat-message', (data) => {
             let chatMessages = document.getElementById('chat-messages');
             let messageDiv = document.createElement('div');
-            messageDiv.textContent = `${data.username}: ${data.message}`;
+            messageDiv.classList.add('chat-message');
+            
+            // Create sender name span
+            let senderSpan = document.createElement('span');
+            senderSpan.classList.add('sender-name');
+            senderSpan.textContent = data.username;
+            
+            // Create message text node
+            let messageText = document.createTextNode(`: ${data.message}`);
+            
+            // Append sender name and message text to the message
+            messageDiv.appendChild(senderSpan);
+            messageDiv.appendChild(messageText);
+            
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+            
+            // Scroll to the bottom of the chat after message is added
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // if chat sidebar closed notify
+            if (document.getElementById('chat-sidebar').style.display != "block") {
+                // Increment unread messages and update badge
+                unreadMessages++;
+                let notificationBadge = document.getElementById('notification-badge');
+                notificationBadge.textContent = unreadMessages;
+                notificationBadge.style.display = "inline";
+            }
+
         });
 
+        // Toggle chat sidebar visibility
+        document.getElementById('toggle-chat').addEventListener('click', () => {
+            document.getElementById('chat-sidebar').style.display = "block";
+            document.getElementById('chat-input-container').style.display = "flex";
+            document.getElementById('toggle-chat').style.display = "none";
+
+            // Reset unread messages and hide badge
+            unreadMessages = 0;
+            document.getElementById('notification-badge').style.display = "none";
+        });
+
+        // Close chat sidebar
+        document.getElementById('close-chat').addEventListener('click', () => {
+            document.getElementById('chat-sidebar').style.display = "none";
+            document.getElementById('chat-input-container').style.display = "none";
+            document.getElementById('toggle-chat').style.display = "block";
+        });
     </script>
 </body>
 </html>

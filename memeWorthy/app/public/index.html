@@ -62,12 +62,12 @@
         <img src="images/MemeWorthyLogo.png" alt="Meme Worthy Logo" style="max-width: 33%; min-width: 300px; height: auto;">
     </div>
     <div class="username-input-container">
-		<input id="username" type="text" name="username" placeholder="Enter your username..."  class="rounded-input">
-	</div>
-	<div class="button-container">
-		<button id="create-room" class="room-button">Create Room</button>
-		<button id="join-room" class="room-button">Join Room</button>
-	</div>
+        <input id="username" type="text" name="username" placeholder="Enter your username..."  class="rounded-input">
+    </div>
+    <div class="button-container">
+        <button id="create-room" class="room-button">Create Room</button>
+        <button id="join-room" class="room-button">Join Room</button>
+    </div>
     
     <script>
 
@@ -114,7 +114,12 @@
                         if(data.userId){ //if successful, go to room
                             window.location.href = `/room/${data.roomId}?username=${username}&userId=${data.userId}`;
                         }else{
-                            alert('Room not found');
+                            // Handle different error messages
+                            if (data.error === 'Room is full') {
+                                alert('This room is full');
+                            } else if (data.error === 'Room not found') {
+                                alert('Room not found');
+                            }
                         }
                     })
                     .catch(error => console.error('Error:', error));
@@ -128,4 +133,3 @@
     </script>
 </body>
 </html>
-
