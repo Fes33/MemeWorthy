@@ -94,7 +94,6 @@ app.post('/create-room', (req, res) => {
     rooms[roomId] = {
         ownerId: userId,
         users: [{ userId, username }],
-        maxPlayers: 5, // Default Max
         maxRound: 3,
         gameState: {
             deck: deck,
@@ -109,39 +108,17 @@ app.post('/create-room', (req, res) => {
     res.status(200).json({ roomId, userId });
 });
 
-//post request handler for setting max players
-app.post('/set-max-players', (req, res) => {
-    let { roomId, maxPlayers } = req.body;
-    if (rooms[roomId]) {
-        //valid number
-        if (maxPlayers >= rooms[roomId].users.length) {
-            rooms[roomId].maxPlayers = maxPlayers;
-            res.status(200).json({ success: true });
-        } else {
-            res.status(400).json({ error: 'Max players cannot be less than current number of users' });
-        }
-    } else {
-        res.status(404).send('Room not found');
-    }
-});
-
 //post request handler to join a room
 app.post('/join-room', (req, res) => {
     let { roomId, username } = req.body;
     if (rooms[roomId]) {
-        //check if room full
-        if (rooms[roomId].users.length < rooms[roomId].maxPlayers) {
-            let userId = uuidv4();
-            rooms[roomId].users.push({ userId, username });
-            io.to(roomId).emit('user-joined', { userId, username });
-            console.log(`${username} (${userId}) joined Room ${roomId}`);
-            res.status(200).json({ userId, roomId });
-        } else {
-            console.log("room is full");
-            res.status(400).json('Room is full');
-        }
+        let userId = uuidv4();
+        rooms[roomId].users.push({ userId, username });
+        io.to(roomId).emit('user-joined', { userId, username });
+        console.log(`${username} (${userId}) joined Room ${roomId}`);
+        res.status(200).json({ userId, roomId });
     } else {
-        res.status(400).json('Room not found');
+        res.status(404).send('Room not found');
     }
 });
 
@@ -165,7 +142,6 @@ app.get('/room-info/:roomId', (req, res) => {
 
 //post request handler to start the game
 app.post('/start-game', (req, res) => {
-
     let { roomId, useCustomPrompt, customPrompts, username, deckName, useUserCreatedDeck, deckId, maxRound } = req.body;
 
     if (rooms[roomId]) {
@@ -355,6 +331,7 @@ async function startRound(roomId, round){
         return;
     }
     
+
 }
 
 // Handle Round 1 Submissions
@@ -645,9 +622,9 @@ app.post('/delete-deck', async (req, res) => {
 io.on('connection', (socket) => {
     console.log('New client connected');
 
-    socket.on('join-room', ({ roomId, userId }) => {
+    socket.on('join-room', ({ roomId, username }) => {
         socket.join(roomId);
-        userSocketMap[socket.id] = { roomId, userId };
+        userSocketMap[socket.id] = { roomId, username };
     });
 
     socket.on('chat-message', (data) => {
@@ -656,12 +633,12 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('Client disconnected');
-        let { roomId, userId } = userSocketMap[socket.id];
+        let { roomId, username } = userSocketMap[socket.id];
         if (roomId && rooms[roomId]) {
             let room = rooms[roomId];
-            room.users = room.users.filter(user => user.userId !== userId);
-            io.to(roomId).emit('user-left', { userId });
-            console.log(`User ${userId} left Room ${roomId}`);
+            room.users = room.users.filter(user => user.username !== username);
+            io.to(roomId).emit('user-left', { username });
+            console.log(`User ${username} left Room ${roomId}`);
 
             if (room.users.length === 0) {
                 delete rooms[roomId];

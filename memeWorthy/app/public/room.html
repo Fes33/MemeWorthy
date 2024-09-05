@@ -39,10 +39,6 @@
         .hidden {
             display: none;
         }
-        @font-face {
-            font-family: 'Chau';
-            src: url('/fonts/ChauPhilomeneOne-Regular.ttf') format('truetype');
-        }
 
         #toggle-chat {
             position: fixed;
@@ -141,6 +137,24 @@
             font-size: 12px;
             display: none;
         }
+        .room-button {
+            width: 200px;
+            height: 60px;
+            border-radius: 15px;
+            box-shadow: 10px 10px 0 black;
+            border: none;
+            font-family: 'Chau', sans-serif;
+            font-size: 35px;
+            text-align: center;
+            line-height: 30px;
+        }
+        .room-button:hover {
+            background-color: #12449A; 
+        }
+        @font-face {
+            font-family: 'Chau';
+            src: url('../fonts/Chau_Philomene_One/ChauPhilomeneOne-Regular.ttf') format('truetype');
+        }
 
     </style>
 </head>
@@ -148,44 +162,52 @@
     <div class="logo-container">
         <img src="/images/MemeWorthyLogo.png" alt="Meme Worthy Logo" style="max-width: 33%; min-width: 300px; height: auto;">
     </div>
-    <h1 class="room-info">Welcome to the Game Room</h1>
-    <p id="current-user" class="room-info"></p>
-    <p class="room-info">Tell your friends to join using this code:</p>
-    <div id="room-code" class="room-code"></div>
-
-    <p class="room-info">Users in this room:</p>
-    <ul id="users-list" class="user-list"></ul>
-
+    <div id="room-info">
+        <h1 class="room-info">Welcome to the Game Room</h1>
+        <p id="current-user" class="room-info"></p>
+        <p class="room-info">Tell your friends to join using this code:</p>
+        <div id="room-code" class="room-code"></div>
     
-
-    <div id="start-game-container">
-    <button id="start-game">Start Game</button>
+        <p class="room-info">Users in this room:</p>
+        <ul id="users-list" class="user-list"></ul>
     </div>
-
-    <div id="max-players-container" class="hidden">
-    <label for="max-players" id="max-players-text">Set Max Number of Players:</label>
-    <input type="number" id="max-players-number" min="1" max="10" value="5">
-    <button id="set-max-players">Set</button>
-    </div>
-
-    <div id="rounds-container" class="hidden">
-    <label for="num-rounds">Number of Rounds:</label>
-    <input type="number" id="num-rounds" min="1" max="10" value="3">
-    </div>
-
-    <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
-    <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
+    
 
     
 
     
 
+    <div id="game-settings" class="hidden">
+        <div id="start-game-container" style="padding-bottom: 40px;">
+        <button id="start-game" class="room-button">Start Game</button>
+        </div>
+        <p>Game Settings</p>
+        <div id="max-players-container">
+        <label for="max-players" id="max-players-text">Set Max Number of Players:</label>
+        <input type="number" id="max-players-number" min="1" max="10" value="5">
+        <button id="set-max-players">Set</button>
+        </div>
+
+        <div id="rounds-container">
+        <label for="num-rounds">Number of Rounds:</label>
+        <input type="number" id="num-rounds" min="1" max="10" value="3">
+        </div>
+
+        <label for="use-custom-prompt" id="use-custom-prompt-text">Use Custom Prompt</label>
+        <input type="checkbox" id="use-custom-prompt" name="use-custom-prompt"> 
+    </div>
+
+    
+
+    
+    <div id="round-label" class="hidden">Round 1</div>
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
         <input id="gif-search" type="text" placeholder="Search for a GIF">
         <button id="search-gif">Search</button>
         <div id="gif-results"></div>
     </div>
+    <div id="log"></div>
     <div id="voting-container" class="hidden">
         <h2>Vote for GIFs</h2>
         <div id="gif-votes"></div>
@@ -312,7 +334,7 @@
             let usersList = document.getElementById('users-list');
             let users = usersList.getElementsByTagName('li');
             for (let user of users) { //goes through list, compares the names, and deletes once found.
-                if (user.textContent === data.userId) {
+                if (user.textContent === data.username) {
                     usersList.removeChild(user);
                     break;
                 }
@@ -331,30 +353,49 @@
             }
         });
 
+
+        //this shows the custom prompt functionality only to room creator
+        //this fetch fetches the room creator and compares it against the current user
+        fetch(`/room-info/${roomId}`)
+        .then(response => {
+            // Check if the response is successful
+            if (!response.ok) {
+                throw new Error('Room not found');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Print the ownerId from the received data
+            if(data.ownerId === userId){
+                console.log("owner");
+                document.getElementById('game-settings').classList.remove('hidden');
+                // let useCustomPromptElement = document.getElementById('use-custom-prompt');
+                // let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+                // let startButton = document.getElementById('start-game');
+                // useCustomPromptElement.classList.add('hidden');
+                // useCustomPromptText.classList.add('hidden');
+                // startButton.classList.add('hidden');
+            }else{
+                console.log("owner");
+            }
+        })
+        .catch(error => {
+            // Handle any errors
+            console.error('Error:', error.message);
+        });
+
+
         //display the list of current users.
         //get the info about this room from this server 
         fetch(`/room-info/${roomId}`)
             .then(response => response.json())
             .then(data => {
-                if (data.ownerId === userId) {
-                    document.getElementById('rounds-container').classList.remove('hidden');
-                    document.getElementById('max-players-container').classList.remove('hidden');
-                    
-                }
                 let usersList = document.getElementById('users-list');
                 data.users.forEach(user => { //go through the list of users and display them
                     let listItem = document.createElement('li');
                     listItem.textContent = `${user.username}`;
                     usersList.appendChild(listItem);
                 });
-                if (data.ownerId != userId) {
-                    let useCustomPromptElement = document.getElementById('use-custom-prompt');
-                    let useCustomPromptText = document.getElementById('use-custom-prompt-text');
-                    let startButton = document.getElementById('start-game');
-                    useCustomPromptElement.classList.add('hidden');
-                    useCustomPromptText.classList.add('hidden');
-                    startButton.classList.add('hidden');
-                }
             })
             .catch(error => console.error('Error fetching room info:', error));
 
@@ -384,9 +425,11 @@
             //if it is, hide the custompromptdiv and start the game with the appropriate json properties
             if (useUserCreatedDeck) {
                 
-                customPromptDiv.classList.add('hidden');
-                useCustomPromptElement.classList.add('hidden');
-                useCustomPromptText.classList.add('hidden');
+                document.getElementById('game-settings').classList.add('hidden');
+                document.getElementById('room-info').classList.add('hidden');
+                // customPromptDiv.classList.add('hidden');
+                // useCustomPromptElement.classList.add('hidden');
+                // useCustomPromptText.classList.add('hidden');
                 fetch('/start-game', {
                     method: 'POST',
                     headers: {
@@ -432,10 +475,11 @@
                     } else {
                         //if all input fields are filled, and a name has been given for the deck
                         //hide the custom prompt div and start the game with the appropriate json
-                        customPromptDiv.classList.add('hidden');
-                        customPromptDiv.classList.add('hidden');
-                        useCustomPromptElement.classList.add('hidden');
-                        useCustomPromptText.classList.add('hidden');
+                        document.getElementById('game-settings').classList.add('hidden');
+                        document.getElementById('room-info').classList.add('hidden');
+                        // customPromptDiv.classList.add('hidden');
+                        // useCustomPromptElement.classList.add('hidden');
+                        // useCustomPromptText.classList.add('hidden');
                         fetch('/start-game', {
                             method: 'POST',
                             headers: {
@@ -466,9 +510,11 @@
                 //if user is not using custom prompts, start the game wit default settings.
             } else {
 
-                customPromptDiv.classList.add('hidden');
-                useCustomPromptElement.classList.add('hidden');
-                useCustomPromptText.classList.add('hidden');
+                document.getElementById('game-settings').classList.add('hidden');
+                document.getElementById('room-info').classList.add('hidden');
+                // customPromptDiv.classList.add('hidden');
+                // useCustomPromptElement.classList.add('hidden');
+                // useCustomPromptText.classList.add('hidden');
                 fetch('/start-game', {
                     method: 'POST',
                     headers: {
@@ -620,29 +666,33 @@
 
         //this shows the custom prompt functionality only to room creator
         //this fetch fetches the room creator and compares it against the current user
-        fetch(`/room-info/${roomId}`)
-        .then(response => {
-            // Check if the response is successful
-            if (!response.ok) {
-                throw new Error('Room not found');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Print the ownerId from the received data
-            if(data.ownerId != userId){
-                let useCustomPromptElement = document.getElementById('use-custom-prompt');
-                let useCustomPromptText = document.getElementById('use-custom-prompt-text');
-                let startButton = document.getElementById('start-game');
-                useCustomPromptElement.classList.add('hidden');
-                useCustomPromptText.classList.add('hidden');
-                startButton.classList.add('hidden');
-            }
-        })
-        .catch(error => {
-            // Handle any errors
-            console.error('Error:', error.message);
-        });
+        // fetch(`/room-info/${roomId}`)
+        // .then(response => {
+        //     // Check if the response is successful
+        //     if (!response.ok) {
+        //         throw new Error('Room not found');
+        //     }
+        //     return response.json();
+        // })
+        // .then(data => {
+        //     // Print the ownerId from the received data
+        //     if(data.ownerId != userId){
+        //         console.log("not owner");
+        //         document.getElementById('game-settings').classList.add('hidden');
+        //         // let useCustomPromptElement = document.getElementById('use-custom-prompt');
+        //         // let useCustomPromptText = document.getElementById('use-custom-prompt-text');
+        //         // let startButton = document.getElementById('start-game');
+        //         // useCustomPromptElement.classList.add('hidden');
+        //         // useCustomPromptText.classList.add('hidden');
+        //         // startButton.classList.add('hidden');
+        //     }else{
+        //         console.log("owner");
+        //     }
+        // })
+        // .catch(error => {
+        //     // Handle any errors
+        //     console.error('Error:', error.message);
+        // });
 
         // When the game starts, hide the start button and show the prompt and GIF search.
         socket.on('game-started', (data) => {
@@ -650,20 +700,26 @@
             let maxPlayersNumber = document.getElementById('max-players-number');
             let maxPlayerButton = document.getElementById('set-max-players');
 
-            maxPlayersText.classList.add('hidden');
-            maxPlayersNumber.classList.add('hidden');
-            maxPlayerButton.classList.add('hidden');
-
+            // maxPlayersText.classList.add('hidden');
+            // maxPlayersNumber.classList.add('hidden');
+            // maxPlayerButton.classList.add('hidden');
+            document.getElementById('game-settings').classList.add('hidden');
+            document.getElementById('room-info').classList.add('hidden');
+            
+            
             document.getElementById('start-game').classList.add('hidden');
             document.getElementById('game-prompt').textContent = data.prompt;
             document.getElementById('game-prompt').classList.remove('hidden');
             document.getElementById('gif-container').classList.remove('hidden');
+            document.getElementById('round-label').classList.remove('hidden'); 
         });
 
         // Handler for next round
         socket.on('next-round', (data) => {
+            document.getElementById('log').innerHTML = '';
             console.log(`Next round event received for user: ${username}, Round: ${data.round}`);
             document.getElementById('game-prompt').textContent = data.prompt;
+            document.getElementById('round-label').textContent = `Round ${data.round}`;
             document.getElementById('game-prompt').classList.remove('hidden');
 
             // Ensure previous UI state is cleaned up before showing new search bar
@@ -676,6 +732,9 @@
             document.getElementById('game-prompt').classList.add('hidden');
             document.getElementById('gif-container').classList.add('hidden');
             document.getElementById('voting-container').classList.remove('hidden');
+            document.getElementById('round-label').textContent = '';
+            document.getElementById('log').innerHTML = '';
+
 
             let gifVotes = document.getElementById('gif-votes');
             gifVotes.innerHTML = '';
@@ -732,6 +791,9 @@
                     img.src = gif.images.fixed_height.url;
                     img.addEventListener('click', () => {
                         submitGif(gif.images.fixed_height.url);
+                        document.getElementById('log').innerHTML = 'Gif Submitted! Waiting for the rest of the players to submit their gifs.';
+                        document.getElementById('game-prompt').textContent = '';
+                        document.getElementById('gif-search').value = '';
                     });
                     gifResults.appendChild(img);
                 });
