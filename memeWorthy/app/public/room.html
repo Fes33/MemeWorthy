@@ -743,9 +743,9 @@
                     if (submissionUserId === username) {
                         return; // Skip this iteration if the user is trying to vote on their own submission
                     }
-
+                    let roundPrompt = data.roundPrompts[round];
                     let div = document.createElement('div');
-                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${submissionUserId}<br>Round: ${round}<br>`;
+                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${submissionUserId}<br>Round: ${round}<br>Prompt: ${roundPrompt}<br>`;
                     let input = document.createElement('input');
                     input.type = 'number';
                     input.min = 1;
@@ -848,6 +848,7 @@
         // When game is over, display the scores
         socket.on('game-over', (data) => {
             console.log('Game over event received:', data); // Log the received data
+            document.getElementById('game-prompt').textContent = '';
             let scoresDiv = document.createElement('div');
             scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
             Object.entries(data.scores).forEach(([userId, score]) => {

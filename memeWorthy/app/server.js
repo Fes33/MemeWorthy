@@ -100,6 +100,7 @@ app.post('/create-room', (req, res) => {
             round: 0,
             useCustomDeck: false,
             submissions: {},
+            roundPrompts: {},
             submittedUsers: [], // Track which users have submitted in the current round
             votes: {},
         }
@@ -233,6 +234,7 @@ app.post('/start-game', (req, res) => {
             .then(result => {
                 if (result.rows.length > 0) {
                     io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
+                    rooms[roomId].gameState.roundPrompts[1] = result.rows[0].prompt;
                     console.log(`Game started in Room ${roomId} with Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
                 } else {
                     console.error(`No prompts found for Deck #${deckId} in Room ${roomId}`);
@@ -321,6 +323,7 @@ async function startRound(roomId, round){
         
         if (result.rows.length > 0) {
             io.to(roomId).emit('next-round', { round: round, prompt: result.rows[0].prompt });
+            rooms[roomId].gameState.roundPrompts[round] = result.rows[0].prompt;
             console.log(`Game started in Room ${roomId}, with Deck #${deckId}, starting Round ${round} with ${rooms[roomId].users.length} users.`);
         } else {
             console.error(`No prompts found for Deck ${deckId} in Room ${roomId}`);
@@ -496,7 +499,7 @@ function handleRound3Submission(roomId, userId, gifUrl) {
 // Start Voting Phase
 function startVoting(roomId) {
     console.log(`Starting Voting for Room ${roomId}`);
-    io.to(roomId).emit('voting-start', { submissions: rooms[roomId].gameState.submissions });
+    io.to(roomId).emit('voting-start', { submissions: rooms[roomId].gameState.submissions, roundPrompts: rooms[roomId].gameState.roundPrompts});
 }
 
 app.post('/submit-gif', (req, res) => {
