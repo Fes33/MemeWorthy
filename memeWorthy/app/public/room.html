@@ -208,6 +208,7 @@
         <div id="gif-results"></div>
     </div>
     <div id="log"></div>
+    <div id="submission-counter"></div>
     <div id="voting-container" class="hidden">
         <h2>Vote for GIFs</h2>
         <div id="gif-votes"></div>
@@ -727,6 +728,7 @@
             document.getElementById('gif-results').innerHTML = ''; // Clear previous search results
         });
 
+        let alreadyVoted = 0;
         // When the voting phase starts, hide the game prompt and GIF search, then show the voting interface.
         socket.on('voting-start', (data) => {
             document.getElementById('game-prompt').classList.add('hidden');
@@ -734,6 +736,8 @@
             document.getElementById('voting-container').classList.remove('hidden');
             document.getElementById('round-label').textContent = '';
             document.getElementById('log').innerHTML = '';
+            let totalPlayers = document.getElementById('users-list').children.length;
+            document.getElementById('submission-counter').textContent = `Already voted: ${alreadyVoted}/${totalPlayers}`;
 
 
             let gifVotes = document.getElementById('gif-votes');
@@ -802,13 +806,19 @@
         });
 
         // Once your vote is succesfully submitted, you get a message saying it has been
+        
         socket.on('vote-submitted', (data) => {
             console.log(`Vote submitted by user: ${data.username}`);
+            const userList = document.getElementById('users-list');
+            const userCount = userList.children.length;         
             if (data.username === username) {
                 document.getElementById('voting-container').classList.add('hidden');
                 document.getElementById('game-prompt').textContent = 'Your vote has been submitted!';
                 document.getElementById('game-prompt').classList.remove('hidden');
             }
+            alreadyVoted = alreadyVoted + 1;
+            let totalPlayers = document.getElementById('users-list').children.length;
+            document.getElementById('submission-counter').textContent = `Already voted: ${alreadyVoted}/${totalPlayers}`;
         });
 
         // Function to submit votes
@@ -849,6 +859,7 @@
         socket.on('game-over', (data) => {
             console.log('Game over event received:', data); // Log the received data
             document.getElementById('game-prompt').textContent = '';
+            document.getElementById('submission-counter').textContent = '';
             let scoresDiv = document.createElement('div');
             scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
             Object.entries(data.scores).forEach(([userId, score]) => {
