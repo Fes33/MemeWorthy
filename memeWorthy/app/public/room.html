@@ -39,6 +39,13 @@
         .hidden {
             display: none;
         }
+        .round-submissions {
+            background-color: #184eab;
+            padding: 70px 20px; 
+            margin-bottom: 20px; 
+            border: 2px solid white; 
+            border-radius: 10px; 
+        }
 
         #toggle-chat {
             position: fixed;
@@ -156,6 +163,10 @@
             src: url('../fonts/Chau_Philomene_One/ChauPhilomeneOne-Regular.ttf') format('truetype');
         }
 
+        #gif-votes{
+            margin-bottom: 70px;
+        }
+
     </style>
 </head>
 <body>
@@ -212,7 +223,7 @@
     <div id="voting-container" class="hidden">
         <h2>Vote for GIFs</h2>
         <div id="gif-votes"></div>
-        <button id="submit-votes">Submit Votes</button>
+        <button id="submit-votes" class="room-button">Submit Votes</button>
     </div>
     <div id="custom-prompt-div" class="hidden">
         <h2>Create a deck with 10 unique prompts to use in your game!</h2>
@@ -430,7 +441,7 @@
                 
                 document.getElementById('game-settings').classList.add('hidden');
                 document.getElementById('room-info').classList.add('hidden');
-                // customPromptDiv.classList.add('hidden');
+                customPromptDiv.classList.add('hidden');
                 // useCustomPromptElement.classList.add('hidden');
                 // useCustomPromptText.classList.add('hidden');
                 fetch('/start-game', {
@@ -480,6 +491,7 @@
                         //hide the custom prompt div and start the game with the appropriate json
                         document.getElementById('game-settings').classList.add('hidden');
                         document.getElementById('room-info').classList.add('hidden');
+                        customPromptDiv.classList.add('hidden');
                         // customPromptDiv.classList.add('hidden');
                         // useCustomPromptElement.classList.add('hidden');
                         // useCustomPromptText.classList.add('hidden');
@@ -515,6 +527,7 @@
 
                 document.getElementById('game-settings').classList.add('hidden');
                 document.getElementById('room-info').classList.add('hidden');
+                customPromptDiv.classList.add('hidden');
                 // customPromptDiv.classList.add('hidden');
                 // useCustomPromptElement.classList.add('hidden');
                 // useCustomPromptText.classList.add('hidden');
@@ -745,13 +758,20 @@
             let gifVotes = document.getElementById('gif-votes');
             gifVotes.innerHTML = '';
             Object.entries(data.submissions).forEach(([round, submissions]) => {
+                let roundDiv = document.createElement('div');
+                roundDiv.id = `round-${round}-div`;
+                let roundPrompt = data.roundPrompts[round];
+                roundDiv.innerHTML = `Round ${round}!<br>Prompt: ${roundPrompt}<br><br>`;
+                roundDiv.classList.add('round-submissions');
+                
                 Object.entries(submissions).forEach(([submissionUserId, gifUrl]) => {
                     if (submissionUserId === username) {
                         return; // Skip this iteration if the user is trying to vote on their own submission
                     }
                     let roundPrompt = data.roundPrompts[round];
                     let div = document.createElement('div');
-                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>User: ${submissionUserId}<br>Round: ${round}<br>Prompt: ${roundPrompt}<br>`;
+                    //div.classList.add('round-submissions');
+                    div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>submitted by: ${submissionUserId}<br>Vote from 1-10: `;
                     let input = document.createElement('input');
                     input.type = 'number';
                     input.min = 1;
@@ -759,8 +779,10 @@
                     input.dataset.userId = submissionUserId;
                     input.dataset.round = round;
                     div.appendChild(input);
-                    gifVotes.appendChild(div);
+                    roundDiv.append(div);
+                    
                 });
+                gifVotes.appendChild(roundDiv);
             });
         });
 
@@ -863,12 +885,20 @@
             document.getElementById('game-prompt').textContent = '';
             document.getElementById('submission-counter').textContent = '';
             document.getElementById('back-home').classList.remove('hidden');
+            document.getElementById('back-home').classList.add('room-button');
             let scoresDiv = document.createElement('div');
             scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
+            let maxScore = 0;
+            let winner = '';
             Object.entries(data.scores).forEach(([userId, score]) => {
                 scoresDiv.innerHTML += `<p>User: ${userId} - Score: ${score}</p>`;
+                if(score > maxScore){
+                    maxScore = score;
+                    winner = userId;
+                }
             });
             document.body.appendChild(scoresDiv);
+            document.body.appendChild(winnerDiv);
         });
 
 
