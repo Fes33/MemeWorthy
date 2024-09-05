@@ -211,7 +211,7 @@
     
 
     
-    <div id="round-label" class="hidden">Round 1</div>
+    <div id="round-label" class="hidden" style="-webkit-text-stroke: 1px #184eab; font-size: 40px;"> <strong>Round 1</strong></div>
     <div id="game-prompt" class="hidden"></div>
     <div id="gif-container" class="hidden">
         <input id="gif-search" type="text" placeholder="Search for a GIF">
@@ -244,7 +244,7 @@
         <button id="load-more-decks">Load More</button>
     </div>
 
-    <button id="back-home" class="hidden">Back to Home</button>
+    <button id="back-home" class="hidden">Back Home</button>
 
     <div id="chat-sidebar">
         <div id="chat-header">
@@ -545,6 +545,14 @@
                         decks.forEach(deck => {
                             const deckDiv = document.createElement('div');
                             deckDiv.className = 'user-deck';
+                            deckDiv.style.display = 'flex';
+                            deckDiv.style.justifyContent = 'center'; 
+                            deckDiv.style.alignItems = 'center'; 
+                            deckDiv.style.flexDirection = 'column'; 
+
+                            const titleContainer = document.createElement('div');
+                            titleContainer.style.display = 'flex';
+                            titleContainer.style.alignItems = 'center';
 
                             const deckTitle = document.createElement('h3');
                             deckTitle.textContent = `Deck Name: ${deck.deckName} (by ${deck.creator})`;
@@ -554,6 +562,7 @@
                             deckCheckbox.type = 'checkbox';
                             deckCheckbox.name = 'deckSelect';
                             deckCheckbox.value = deck.id;
+                            deckCheckbox.style.marginLeft = '10px';
                             
                             deckCheckbox.addEventListener('change', function () {
                                 if (this.checked) {
@@ -603,13 +612,16 @@
                                 }
                             });
                             
-                            deckDiv.appendChild(deckCheckbox);
-                            deckDiv.appendChild(deckTitle);
+                            titleContainer.appendChild(deckTitle);
+                            titleContainer.appendChild(deckCheckbox);
+                            deckDiv.appendChild(titleContainer);
                             deckDiv.appendChild(deleteButton);
                             
                             //add the decks as a list
                             const promptList = document.createElement('ul');
                             promptList.style.listStyleType = 'none';
+                            promptList.style.padding = '0'; 
+                            promptList.style.textAlign = 'center';
                             deck.prompts.forEach(prompt => {
                                 const promptItem = document.createElement('li');
                                 promptItem.textContent = prompt;
@@ -661,7 +673,7 @@
             document.getElementById('log').innerHTML = '';
             console.log(`Next round event received for user: ${username}, Round: ${data.round}`);
             document.getElementById('game-prompt').textContent = data.prompt;
-            document.getElementById('round-label').textContent = `Round ${data.round}`;
+            document.getElementById('round-label').innerHTML = `<strong>Round ${data.round}</strong>`;
             document.getElementById('game-prompt').classList.remove('hidden');
 
             // Ensure previous UI state is cleaned up before showing new search bar
@@ -686,9 +698,20 @@
             Object.entries(data.submissions).forEach(([round, submissions]) => {
                 let roundDiv = document.createElement('div');
                 roundDiv.id = `round-${round}-div`;
-                let roundPrompt = data.roundPrompts[round];
-                roundDiv.innerHTML = `Round ${round}!<br>Prompt: ${roundPrompt}<br><br>`;
                 roundDiv.classList.add('round-submissions');
+
+                //container for title
+                const textContainer = document.createElement('div');
+                let roundPrompt = data.roundPrompts[round];
+                textContainer.innerHTML = `Round ${round}!<br>Prompt: ${roundPrompt}<br><br>`;
+                roundDiv.appendChild(textContainer);
+
+                //container for submissions
+                const flexContainer = document.createElement('div');
+                flexContainer.style.display = 'flex'; 
+                flexContainer.style.justifyContent = 'center'; 
+                flexContainer.style.alignItems = 'center'; 
+                flexContainer.style.flexWrap = 'wrap';
                 
                 Object.entries(submissions).forEach(([submissionUserId, gifUrl]) => {
                     if (submissionUserId === username) {
@@ -696,6 +719,7 @@
                     }
                     let roundPrompt = data.roundPrompts[round];
                     let div = document.createElement('div');
+                    div.style.marginLeft = '10px';
                     div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>submitted by: ${submissionUserId}<br>Vote from 1-10: `;
                     let input = document.createElement('input');
                     input.type = 'number';
@@ -704,9 +728,10 @@
                     input.dataset.userId = submissionUserId;
                     input.dataset.round = round;
                     div.appendChild(input);
-                    roundDiv.append(div);
+                    flexContainer.append(div);
                     
                 });
+                roundDiv.appendChild(flexContainer);
                 gifVotes.appendChild(roundDiv);
             });
         });

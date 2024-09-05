@@ -195,6 +195,7 @@ app.post('/start-game', (req, res) => {
             .then(result => {
                 if (result.rows.length > 0) {
                     io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
+                    rooms[roomId].gameState.roundPrompts[1] = result.rows[0].prompt;
                     console.log(`Game started in Room ${roomId} with User-Created Deck #${deckId}, starting Round 1 with ${rooms[roomId].users.length} users.`);
                 } else {
                     console.error(`No prompts found for User-Created Deck #${deckId} in Room ${roomId}`);
@@ -240,6 +241,7 @@ app.post('/start-game', (req, res) => {
             .then(result => {
                 if (result.rows.length > 0) {
                     io.to(roomId).emit('game-started', { round: 1, prompt: result.rows[0].prompt });
+                    rooms[roomId].gameState.roundPrompts[1] = result.rows[0].prompt;
                     console.log(`Game started in Room ${roomId} with Custom Deck #${rooms[roomId].gameState.deck}, starting Round 1 with ${rooms[roomId].users.length} users.`);
                 } else {
                     console.error(`No prompts found for Custom Deck #${rooms[roomId].gameState.deck} in Room ${roomId}`);
