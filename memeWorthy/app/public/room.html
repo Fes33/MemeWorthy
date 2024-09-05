@@ -233,6 +233,8 @@
         <button id="load-more-decks">Load More</button>
     </div>
 
+    <button id="back-home" class="hidden">Back to Home</button>
+
     <div id="chat-sidebar">
         <div id="chat-header">
             <h2>Chat</h2>
@@ -860,6 +862,7 @@
             console.log('Game over event received:', data); // Log the received data
             document.getElementById('game-prompt').textContent = '';
             document.getElementById('submission-counter').textContent = '';
+            document.getElementById('back-home').classList.remove('hidden');
             let scoresDiv = document.createElement('div');
             scoresDiv.innerHTML = '<h2>Game Over! Scores:</h2>';
             Object.entries(data.scores).forEach(([userId, score]) => {
@@ -937,6 +940,10 @@
             document.getElementById('chat-sidebar').style.display = "none";
             document.getElementById('chat-input-container').style.display = "none";
             document.getElementById('toggle-chat').style.display = "block";
+        });
+
+        document.getElementById('back-home').addEventListener('click', () => {
+            window.location.href = `../`;
         });
     </script>
 </body>
