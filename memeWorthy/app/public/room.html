@@ -289,7 +289,7 @@
         roomId = pathSegments[pathSegments.length - 1]; //getting the last segment, which is the room code
         document.getElementById('room-code').textContent = roomId; //display on screen
         
-        //extract userId from url query strings
+        //extract username from url query strings
         let urlParams = new URLSearchParams(window.location.search);
         username = urlParams.get('username');
         userId = urlParams.get('userId');
@@ -336,18 +336,6 @@
             let usersList = document.getElementById('users-list');
             let users = usersList.getElementsByTagName('li');
             for (let user of users) { //goes through list, compares the names, and deletes once found.
-                if (user.textContent === data.userId) {
-                    usersList.removeChild(user);
-                    break;
-                }
-            }
-        });
-
-        //this will remove the user that left from the list of users displayed
-        socket.on('user-left', (data) => {
-            let usersList = document.getElementById('users-list');
-            let users = usersList.getElementsByTagName('li');
-            for (let user of users) { //goes through list, compares the names, and deletes once found.
                 if (user.textContent === data.username) {
                     usersList.removeChild(user);
                     break;
@@ -355,21 +343,8 @@
             }
         });
 
-        //this will remove the user that left from the list of users displayed
-        socket.on('user-left', (data) => {
-            let usersList = document.getElementById('users-list');
-            let users = usersList.getElementsByTagName('li');
-            for (let user of users) { //goes through list, compares the names, and deletes once found.
-                if (user.textContent === data.userId) {
-                    usersList.removeChild(user);
-                    break;
-                }
-            }
-        });
 
-
-        //this shows the custom prompt functionality only to room creator
-        //this fetch fetches the room creator and compares it against the current user
+        //this shows the game settings only to room creator
         fetch(`/room-info/${roomId}`)
         .then(response => {
             // Check if the response is successful
@@ -379,22 +354,15 @@
             return response.json();
         })
         .then(data => {
-            // Print the ownerId from the received data
             if(data.ownerId === userId){
                 console.log("owner");
                 document.getElementById('game-settings').classList.remove('hidden');
-                // let useCustomPromptElement = document.getElementById('use-custom-prompt');
-                // let useCustomPromptText = document.getElementById('use-custom-prompt-text');
-                // let startButton = document.getElementById('start-game');
-                // useCustomPromptElement.classList.add('hidden');
-                // useCustomPromptText.classList.add('hidden');
-                // startButton.classList.add('hidden');
             }else{
                 console.log("owner");
             }
         })
         .catch(error => {
-            // Handle any errors
+            //handle any errors
             console.error('Error:', error.message);
         });
 
@@ -418,6 +386,7 @@
 
             document.getElementById('rounds-container').classList.add('hidden');
 
+            //retrieve gamesettings
             let useCustomPrompt = document.getElementById('use-custom-prompt').checked;
             let useCustomPromptElement = document.getElementById('use-custom-prompt');
             let useCustomPromptText = document.getElementById('use-custom-prompt-text');
@@ -442,8 +411,6 @@
                 document.getElementById('game-settings').classList.add('hidden');
                 document.getElementById('room-info').classList.add('hidden');
                 customPromptDiv.classList.add('hidden');
-                // useCustomPromptElement.classList.add('hidden');
-                // useCustomPromptText.classList.add('hidden');
                 fetch('/start-game', {
                     method: 'POST',
                     headers: {
@@ -451,7 +418,7 @@
                     },
                     body: JSON.stringify({
                         roomId,
-                        useCustomPrompt: false, // User is using a user-created deck
+                        useCustomPrompt: false,
                         customPrompts: null,
                         username: username,
                         deckName: null,
@@ -492,9 +459,6 @@
                         document.getElementById('game-settings').classList.add('hidden');
                         document.getElementById('room-info').classList.add('hidden');
                         customPromptDiv.classList.add('hidden');
-                        // customPromptDiv.classList.add('hidden');
-                        // useCustomPromptElement.classList.add('hidden');
-                        // useCustomPromptText.classList.add('hidden');
                         fetch('/start-game', {
                             method: 'POST',
                             headers: {
@@ -528,9 +492,6 @@
                 document.getElementById('game-settings').classList.add('hidden');
                 document.getElementById('room-info').classList.add('hidden');
                 customPromptDiv.classList.add('hidden');
-                // customPromptDiv.classList.add('hidden');
-                // useCustomPromptElement.classList.add('hidden');
-                // useCustomPromptText.classList.add('hidden');
                 fetch('/start-game', {
                     method: 'POST',
                     headers: {
@@ -660,55 +621,24 @@
                         });
 
                         if (decks.length < 3) {
-                            document.getElementById('load-more-decks').disabled = true; // Disable the button if there are no more decks to load
+                            document.getElementById('load-more-decks').disabled = true; //disable the button if there are no more decks to load
                         }
 
-                        offset += 3; // Increase the offset for the next batch
+                        offset += 3; //increase the offset for the next batch
                     })
                     .catch(error => {
                         console.error('Error fetching decks:', error);
                     });
             };
 
-            // Load the first batch when the page loads
+            //load the first batch when the page loads
             loadDecks();
 
-            // Add event listener to "Load More" button
+            //add event listener to "Load More" button
             document.getElementById('load-more-decks').addEventListener('click', () => {
                 loadDecks();
             });
         });
-
-
-        //this shows the custom prompt functionality only to room creator
-        //this fetch fetches the room creator and compares it against the current user
-        // fetch(`/room-info/${roomId}`)
-        // .then(response => {
-        //     // Check if the response is successful
-        //     if (!response.ok) {
-        //         throw new Error('Room not found');
-        //     }
-        //     return response.json();
-        // })
-        // .then(data => {
-        //     // Print the ownerId from the received data
-        //     if(data.ownerId != userId){
-        //         console.log("not owner");
-        //         document.getElementById('game-settings').classList.add('hidden');
-        //         // let useCustomPromptElement = document.getElementById('use-custom-prompt');
-        //         // let useCustomPromptText = document.getElementById('use-custom-prompt-text');
-        //         // let startButton = document.getElementById('start-game');
-        //         // useCustomPromptElement.classList.add('hidden');
-        //         // useCustomPromptText.classList.add('hidden');
-        //         // startButton.classList.add('hidden');
-        //     }else{
-        //         console.log("owner");
-        //     }
-        // })
-        // .catch(error => {
-        //     // Handle any errors
-        //     console.error('Error:', error.message);
-        // });
 
         // When the game starts, hide the start button and show the prompt and GIF search.
         socket.on('game-started', (data) => {
@@ -716,12 +646,8 @@
             let maxPlayersNumber = document.getElementById('max-players-number');
             let maxPlayerButton = document.getElementById('set-max-players');
 
-            // maxPlayersText.classList.add('hidden');
-            // maxPlayersNumber.classList.add('hidden');
-            // maxPlayerButton.classList.add('hidden');
             document.getElementById('game-settings').classList.add('hidden');
             document.getElementById('room-info').classList.add('hidden');
-            
             
             document.getElementById('start-game').classList.add('hidden');
             document.getElementById('game-prompt').textContent = data.prompt;
@@ -770,7 +696,6 @@
                     }
                     let roundPrompt = data.roundPrompts[round];
                     let div = document.createElement('div');
-                    //div.classList.add('round-submissions');
                     div.innerHTML = `<img src="${gifUrl}" alt="GIF"><br>submitted by: ${submissionUserId}<br>Vote from 1-10: `;
                     let input = document.createElement('input');
                     input.type = 'number';
@@ -897,6 +822,9 @@
                     winner = userId;
                 }
             });
+            let winnerDiv = document.createElement('div');
+            winnerDiv.innerHTML = `<h2>Winner: ${winner}!</h2>`;
+
             document.body.appendChild(scoresDiv);
             document.body.appendChild(winnerDiv);
         });
